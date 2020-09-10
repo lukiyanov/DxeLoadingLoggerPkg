@@ -1,0 +1,6 @@
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = DxeLoadingLoggerPkg
+  PACKAGE_GUID                   = ccb8b6c3-0f94-4f7a-a011-1f8caa867806
+  PACKAGE_VERSION                = 1.0
+
