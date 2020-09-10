@@ -13,7 +13,7 @@
                 "isDefault": true
             },
             "linux": {
-                "command": "./DxeLoadingLoggerPkg/build.sh"
+                "command": ". edksetup.sh && build --platform=DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.dsc"
             }
         }
     ]
