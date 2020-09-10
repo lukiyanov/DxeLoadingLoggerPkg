@@ -1,0 +1,20 @@
+{
+    // Пример tasks.json для vs-code.
+    // Предполагается, что корнем workspace'а является директория edk2.
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "group": {
+                // Имя группы, к которой относится задача.
+                "kind": "build",
+                // Будет вызываться по "Ctrl + Shift + B"
+                "isDefault": true
+            },
+            "linux": {
+                "command": "./DxeLoadingLoggerPkg/build.sh"
+            }
+        }
+    ]
+}
