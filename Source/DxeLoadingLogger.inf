@@ -1,27 +1,30 @@
 [Defines]
   INF_VERSION                    = 0x00010019
   BASE_NAME                      = DxeLoadingLogger
-  FILE_GUID                      = f19865d6-1efe-4a9d-8c28-cefa88230d99
+  FILE_GUID                      = 5C176A5E-CAEF-4EA8-9CD6-D310C6DA129E
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
   ENTRY_POINT                    = Initialize
 
 [Sources]
-  main.c
+  DxeLoadingLogger.c
   DxeLoadingLog.c
-  Vector.c
 
 [Packages]
   MdePkg/MdePkg.dec
   IntelFrameworkModulePkg/IntelFrameworkModulePkg.dec
+  DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.dec
 
 [LibraryClasses]
+  # Стандартные
   UefiDriverEntryPoint
   UefiBootServicesTableLib
   BaseMemoryLib
   BaseLib
   UefiLib
   DevicePathLib
+  # Наши
+  VectorLib
 
 [Depex]
   TRUE
