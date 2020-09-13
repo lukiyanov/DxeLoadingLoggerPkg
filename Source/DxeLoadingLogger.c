@@ -96,6 +96,7 @@ static ProtocolEntry Protocols[] = {
 static DxeLoadingLog      gLoadingLogInstance;
 static EFI_FILE_PROTOCOL  *gLogFileProtocol;
 
+#define RELEASE_BUILD
 // ----------------------------------------------------------------------------
 EFI_STATUS
 EFIAPI
@@ -109,18 +110,32 @@ Initialize (
 
   Set_gAmiUnknownProtocol_B_C();
 
-  Status = ExecuteFunctionOnProtocolAppearance(
 #ifdef RELEASE_BUILD
-    &gExitPmAuthProtocolGuid,             // Устанавливается при входе в Settings.
-#else
-    &gEfiBootManagerPolicyProtocolGuid,   // Запуск вручную с флешки на время тестирования.
-#endif
+
+  Status = ExecuteFunctionOnProtocolAppearance (
+    &my_gEfiEventReadyToBootGuid,
     &ShowLogAndCleanup
     );
   RETURN_ON_ERR(Status)
 
+  Status = ExecuteFunctionOnProtocolAppearance (
+    &my_gLenovoSystemHiiDatabaseDxeGuid,  // Устанавливается перед входом в Settings.
+    &ShowLogAndCleanup
+    );
+  RETURN_ON_ERR(Status)
+
+#else
+  // Запуск вручную с флешки на время тестирования.
+  Status = ExecuteFunctionOnProtocolAppearance(
+    &gEfiBootManagerPolicyProtocolGuid,
+    &ShowLogAndCleanup
+    );
+  RETURN_ON_ERR(Status)
+
+#endif
+
   DxeLoadingLog_Construct (&gLoadingLogInstance);
-  
+
   Status = DxeLoadingLog_SetObservingProtocols (&gLoadingLogInstance, Protocols, ProtocolCount);
   RETURN_ON_ERR(Status)
 
@@ -191,54 +206,54 @@ ShowAndWriteLog (
 
   FOR_EACH_VCT(LOG_ENTRY, entry, Log->LogData) {
     switch (entry->Type) {
-      case LOG_ENTRY_TYPE_PROTOCOL_INSTALLED:
-        PrintToLog(L"- PROTOCOL-INSTALLED: ");
-        PrintToLog(entry->ProtocolInstalled.ProtocolName);
+    case LOG_ENTRY_TYPE_PROTOCOL_INSTALLED:
+      PrintToLog(L"- PROTOCOL-INSTALLED: ");
+      PrintToLog(entry->ProtocolInstalled.ProtocolName);
+      PrintToLog(L"\r\n");
+      break;
+
+    case LOG_ENTRY_TYPE_IMAGE_LOADED:
+      if (LoadedImagesAfterUs) {
         PrintToLog(L"\r\n");
-        break;
+      }
 
-      case LOG_ENTRY_TYPE_IMAGE_LOADED:
-        if (LoadedImagesAfterUs) {
-          PrintToLog(L"\r\n");
-        }
+      PrintToLog(L"- IMAGE-LOADED: ");
+      AsciiStrToUnicodeStrS (
+        entry->ImageLoaded.ImageName,
+        UnicodeBuffer,
+        UNICODE_BUFFER_SIZE
+        );
+      PrintToLog(UnicodeBuffer);
 
-        PrintToLog(L"- IMAGE-LOADED: ");
-        AsciiStrToUnicodeStrS (
-          entry->ImageLoaded.ImageName,
-          UnicodeBuffer,
-          UNICODE_BUFFER_SIZE
-          );
-        PrintToLog(UnicodeBuffer);
+      // Выравниваем пробелами чтобы лучше читалось:
+      SpacesCount = LOG_ENTRY_IMAGE_NAME_LENGTH - 1 - StrLen(UnicodeBuffer);
+      for (UINTN i = 0; i < SpacesCount; i++) {
+        PrintToLog(L" ");
+      }
 
-        // Выравниваем пробелами чтобы лучше читалось:
-        SpacesCount = LOG_ENTRY_IMAGE_NAME_LENGTH - 1 - StrLen(UnicodeBuffer);
-        for (UINTN i = 0; i < SpacesCount; i++) {
-          PrintToLog(L" ");
-        }
+      PrintToLog(L" loaded by: ");
+      AsciiStrToUnicodeStrS (
+        entry->ImageLoaded.ParentImageName,
+        UnicodeBuffer,
+        UNICODE_BUFFER_SIZE
+        );
+      PrintToLog(UnicodeBuffer);
+      PrintToLog(L"\r\n");
 
-        PrintToLog(L" loaded by: ");
-        AsciiStrToUnicodeStrS (
-          entry->ImageLoaded.ParentImageName,
-          UnicodeBuffer,
-          UNICODE_BUFFER_SIZE
-          );
-        PrintToLog(UnicodeBuffer);
+      if (LoadedImagesAfterUs) {
         PrintToLog(L"\r\n");
+      }
+      break;
 
-        if (LoadedImagesAfterUs) {
-          PrintToLog(L"\r\n");
-        }
-        break;
+    case LOG_ENTRY_TYPE_PROTOCOL_EXISTANCE_ON_STARTUP:
+      PrintToLog(L"- EXSISTENCE-ON-STARTUP: ");
+      PrintToLog(entry->ProtocolExistence.ProtocolName);
+      PrintToLog(L"\r\n");
+      LoadedImagesAfterUs = TRUE;
+      break;
 
-      case LOG_ENTRY_TYPE_PROTOCOL_EXISTANCE_ON_STARTUP:
-        PrintToLog(L"- EXSISTENCE-ON-STARTUP: ");
-        PrintToLog(entry->ProtocolExistence.ProtocolName);
-        PrintToLog(L"\r\n");
-        LoadedImagesAfterUs = TRUE;
-        break;
-
-      default:
-        PrintToLog(L"- UNKNOWN: Log entry with the unknown type.\r\n");
+    default:
+      PrintToLog(L"- UNKNOWN: Log entry with the unknown type.\r\n");
     }
   }
 
@@ -264,7 +279,7 @@ PrintToLog (
 {
   if (gLogFileProtocol == NULL) {
     FindFileSystem (&gLogFileProtocol);
-  } 
+  }
 
   if (gLogFileProtocol) {
     UINTN Length = StrLen(Str) * sizeof(CHAR16);
@@ -386,19 +401,7 @@ CloseLogFile (
     gLogFileProtocol->Flush(gLogFileProtocol);
     gLogFileProtocol->Close(gLogFileProtocol);
     gLogFileProtocol = NULL;
-  } 
+  }
 }
 
 // ----------------------------------------------------------------------------
-// 0. Детектить, куда надо срать, по log.txt
-//
-// 1. Детектить, кто загрузил образ. Для этого есть ParentHandle или что-то типа того в LoadedImageProtocol.
-//
-// 2. Детектить, на кого установлен протокол (КТО установил, к сожалению, выяснить не удастся)
-//    и если на последний загруженный образ то как-нибудь выделить.
-//
-// 3. Вынести прогу в отдельный Pkg, завести для неё отдельный репозиторий (DxeLoadingLogger).
-//
-// 4*. Время от времени чекать наличие новых протоколов, которых нет в Protocols [опционально]
-//     Это пиздец как будет тормозить загрузку, к тому же если протокол будет жить меньше периодичности нашей проверки,
-//     то не будет задетекчен. Поэтому целесообразность под сомнением.

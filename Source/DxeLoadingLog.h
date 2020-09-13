@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Uefi.h>
-#include "Vector.h"
+#include <Library/VectorLib.h>
 
 // ----------------------------------------------------------------------------
 typedef struct
@@ -44,9 +44,9 @@ typedef struct {
 
 // ----------------------------------------------------------------------------
 typedef struct {
-  struct Vector LogData;
-  struct Vector EventHandles;
-  struct Vector LoadedImageHandles;
+  VECTOR LogData;
+  VECTOR EventHandles;
+  VECTOR LoadedImageHandles;
 } DxeLoadingLog;
 
 
