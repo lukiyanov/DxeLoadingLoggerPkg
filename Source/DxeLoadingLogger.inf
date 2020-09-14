@@ -8,7 +8,7 @@
 
 [Sources]
   DxeLoadingLogger.c
-  DxeLoadingLog.c
+  # DxeLoadingLog.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -24,15 +24,12 @@
   UefiLib
   DevicePathLib
   # Наши
-  VectorLib
+  LoggerLib
 
 [Depex]
   TRUE
 
 [Protocols]
-  gExitPmAuthProtocolGuid
-  gEfiBootManagerPolicyProtocolGuid
-
-  gEfiLoadedImageProtocolGuid
+  # gEfiLoadedImageProtocolGuid
   gEfiSimpleFileSystemProtocolGuid
-  gEfiFirmwareVolume2ProtocolGuid
+  # gEfiFirmwareVolume2ProtocolGuid

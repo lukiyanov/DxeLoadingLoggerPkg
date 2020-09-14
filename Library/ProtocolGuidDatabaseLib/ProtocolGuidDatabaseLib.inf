@@ -1,0 +1,17 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = ProtocolGuidDatabaseLib
+  FILE_GUID                      = 73D35573-1CBE-4D5E-A6B6-B1E7662EF5ED
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = ProtocolGuidDatabaseLib
+
+[Sources]
+  ProtocolGuidDatabaseLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.dec
+
+[LibraryClasses]
+  BaseMemoryLib

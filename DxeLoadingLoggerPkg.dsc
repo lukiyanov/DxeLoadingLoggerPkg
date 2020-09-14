@@ -18,6 +18,7 @@
 
 
 [BuildOptions]
+  #GCC:*_*_*_CC_FLAGS                   = -std=c11
   GCC:RELEASE_*_*_CC_FLAGS             = -DMDEPKG_NDEBUG
   MSFT:RELEASE_*_*_CC_FLAGS            = /D MDEPKG_NDEBUG
 
@@ -46,6 +47,8 @@
   # Библиотеки, входящие в состав данного пакета.
   #
   VectorLib                   | DxeLoadingLoggerPkg/Library/VectorLib/VectorLib.inf
+  ProtocolGuidDatabaseLib     | DxeLoadingLoggerPkg/Library/ProtocolGuidDatabaseLib/ProtocolGuidDatabaseLib.inf
+  LoggerLib                   | DxeLoadingLoggerPkg/Library/LoggerLib/LoggerLib.inf
 
 [Components]
   DxeLoadingLoggerPkg/Source/DxeLoadingLogger.inf
