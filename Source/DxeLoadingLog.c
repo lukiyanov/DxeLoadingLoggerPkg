@@ -391,7 +391,7 @@ GetHandleName (
 
     return;
   }
-  
+
   static CHAR8 AsciiBuffer[256];
   Status = UnicodeStrToAsciiStrS (
     ImageName,
@@ -419,7 +419,7 @@ GetHandleName (
     LOG_ENTRY_IMAGE_NAME_LENGTH,
     AsciiBuffer
     );
-  
+
   gBS->FreePool (ImageName);
 }
 
