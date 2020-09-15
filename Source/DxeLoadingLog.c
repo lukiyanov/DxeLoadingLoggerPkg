@@ -42,13 +42,13 @@ GetHandleName (
 VOID
 SetEntryImageNames (
   IN EFI_HANDLE Handle,
-  OUT LOG_ENTRY *LogEntry
+  OUT LOADING_EVENT *LogEntry
   );
 
 VOID
 DetectEntryImageNames (
   IN  DxeLoadingLog *This,
-  OUT LOG_ENTRY *Entry
+  OUT LOADING_EVENT *Entry
   );
 
 VOID
@@ -67,7 +67,7 @@ DxeLoadingLog_Construct (
   DxeLoadingLog *This
   )
 {
-  Vector_Construct (&This->LogData,            sizeof(LOG_ENTRY),  1024);
+  // Vector_Construct (&This->LogData,            sizeof(LOADING_EVENT),  1024);
   Vector_Construct (&This->EventHandles,       sizeof(EFI_EVENT),  1024);
   Vector_Construct (&This->LoadedImageHandles, sizeof(EFI_HANDLE), 64);
 }
@@ -78,9 +78,9 @@ DxeLoadingLog_Destruct (
   DxeLoadingLog *This
   )
 {
-  DxeLoadingLog_QuitObserving(This);
+  // DxeLoadingLog_QuitObserving(This);
 
-  Vector_Destruct (&This->LogData);
+  // Vector_Destruct (&This->LogData);
   Vector_Destruct (&This->EventHandles);
   Vector_Destruct (&This->LoadedImageHandles);
 }
@@ -133,7 +133,7 @@ CheckProtocolExistence (
 {
   EFI_STATUS   Status;
   VOID         *Iface;
-  LOG_ENTRY    LogEntry;
+  LOADING_EVENT    LogEntry;
 
   Status = gBS->LocateProtocol (Protocol->Guid, NULL, &Iface);
   if (! EFI_ERROR (Status)) {
@@ -186,7 +186,7 @@ ProtocolInstalledCallback (
 {
   ProtocolEntry *Protocol = (ProtocolEntry *)Context;
   DxeLoadingLog *This     = (DxeLoadingLog *)Protocol->Logger;
-  LOG_ENTRY LogEntry;
+  LOADING_EVENT LogEntry;
 
   EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
 
@@ -228,7 +228,7 @@ ScanHandleDB (
   for (UINTN Index = 0; Index < HandleCount; Index++) {
     Vector_PushBack (&This->LoadedImageHandles, &Handles[Index]);
 
-    LOG_ENTRY LogEntry;
+    LOADING_EVENT LogEntry;
     LogEntry.Type = LOG_ENTRY_TYPE_IMAGE_LOADED;
     SetEntryImageNames (Handles[Index], &LogEntry);
 
@@ -242,7 +242,7 @@ ScanHandleDB (
 VOID
 SetEntryImageNames(
   IN EFI_HANDLE Handle,
-  OUT LOG_ENTRY *LogEntry
+  OUT LOADING_EVENT *LogEntry
   )
 {
   GetHandleName(Handle, LogEntry->ImageLoaded.ImageName);
@@ -275,7 +275,7 @@ SetEntryImageNames(
 VOID
 DetectEntryImageNames(
   IN  DxeLoadingLog *This,
-  OUT LOG_ENTRY     *LogEntry
+  OUT LOADING_EVENT     *LogEntry
   )
 {
   EFI_STATUS  Status;

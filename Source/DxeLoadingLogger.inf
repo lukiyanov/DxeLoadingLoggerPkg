@@ -8,11 +8,9 @@
 
 [Sources]
   DxeLoadingLogger.c
-  # DxeLoadingLog.c
 
 [Packages]
   MdePkg/MdePkg.dec
-  IntelFrameworkModulePkg/IntelFrameworkModulePkg.dec
   DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.dec
 
 [LibraryClasses]
@@ -24,12 +22,10 @@
   UefiLib
   DevicePathLib
   # Наши
-  LoggerLib
+  EventLoggerLib
 
 [Depex]
   TRUE
 
 [Protocols]
-  # gEfiLoadedImageProtocolGuid
   gEfiSimpleFileSystemProtocolGuid
-  # gEfiFirmwareVolume2ProtocolGuid

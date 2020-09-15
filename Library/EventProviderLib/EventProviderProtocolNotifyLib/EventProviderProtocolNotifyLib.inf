@@ -1,0 +1,17 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = EventProviderProtocolNotifyLib
+  FILE_GUID                      = BD8CFCF8-48AF-4910-BBDA-F52EAF9DF820
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = EventProviderLib | DXE_DRIVER UEFI_APPLICATION UEFI_DRIVER
+
+[Sources]
+  EventProviderProtocolNotifyLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
