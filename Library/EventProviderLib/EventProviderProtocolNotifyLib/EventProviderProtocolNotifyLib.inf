@@ -16,6 +16,7 @@
 [LibraryClasses]
   UefiBootServicesTableLib
   BaseLib
+  BaseMemoryLib
   UefiLib
   DevicePathLib
 

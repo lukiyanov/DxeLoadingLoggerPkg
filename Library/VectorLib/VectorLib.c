@@ -142,7 +142,7 @@ Vector_PushBack (
 VOID *
 Vector_PopBack (
   IN OUT  VECTOR          *This
-)
+  )
 {
   if (This == NULL || This->CountUsed == 0) {
     return NULL;
@@ -167,7 +167,7 @@ VOID *
 Vector_Get (
   IN      VECTOR          *This,
   IN      UINTN           Index
-)
+  )
 {
   if (This == NULL || Index >= This->CountUsed) {
     return NULL;
@@ -188,7 +188,7 @@ Vector_Get (
 VOID *
 Vector_GetBegin (
   IN      VECTOR          *This
-)
+  )
 {
   if (This == NULL || This->CountUsed == 0) {
     return NULL;
@@ -209,13 +209,34 @@ Vector_GetBegin (
 VOID *
 Vector_GetEnd (
   IN      VECTOR          *This
-)
+  )
 {
   if (This == NULL || This->CountUsed == 0) {
     return NULL;
   }
 
   return PTR_OFFSET(This->AllocatedMemory, This->ObjectSize * This->CountUsed);
+}
+
+// -----------------------------------------------------------------------------
+/**
+ * Возвращает указатель на последний элемент вектора.
+ *
+ * @param This                      Указатель на структуру вектора.
+ *
+ * @retval NULL                     Вектор пуст, либо This == NULL.
+ * @return Указатель на последний элемент вектора.
+ */
+VOID *
+Vector_GetLast (
+  IN      VECTOR          *This
+  )
+{
+  if (This == NULL || This->CountUsed == 0) {
+    return NULL;
+  }
+
+  return PTR_OFFSET(This->AllocatedMemory, This->ObjectSize * (This->CountUsed - 1));
 }
 
 // -----------------------------------------------------------------------------
@@ -229,7 +250,7 @@ Vector_GetEnd (
 UINTN
 Vector_Size (
   IN      VECTOR          *This
-)
+  )
 {
   if (This == NULL) {
     return 0;
@@ -247,7 +268,7 @@ Vector_Size (
 VOID
 Vector_Clear (
   IN OUT  VECTOR          *This
-)
+  )
 {
   if (This == NULL) {
     return;

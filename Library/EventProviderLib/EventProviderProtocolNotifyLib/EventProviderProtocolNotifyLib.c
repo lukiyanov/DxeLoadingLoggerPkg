@@ -1,6 +1,7 @@
 #include <Uefi.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/BaseLib.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/UefiLib.h>
 #include <Library/DevicePathLib.h>
 #include <Pi/PiFirmwareFile.h>
@@ -19,12 +20,26 @@
 typedef struct
 {
   // Хэндлы создаваемых нами событий и, соответственно, которые мы должны удалить.
+  // Тип - EFI_EVENT.
   VECTOR EventHandles;
 
   // Предыдущий дамп хэндлов, содержащих EFI_LOADED_IMAGE_PROTOCOL.
   // Используется для детекта новых загруженных образов.
+  // Тип - HANDLE.
   VECTOR LoadedImageHandles;
+
+  // Структуры, передающиеся в ProtocolInstalledCallback().
+  // Тип - NOTIFY_FUNCTION_CONTEXT.
+  VECTOR Contexts;
 } EVENT_PROVIDER_DATA_STRUCT;
+
+// -----------------------------------------------------------------------------
+/// VOID *Context
+typedef struct
+{
+  EVENT_PROVIDER *This;
+  EFI_GUID       *Guid;
+} NOTIFY_FUNCTION_CONTEXT;
 
 // -----------------------------------------------------------------------------
 /**
@@ -44,6 +59,27 @@ VOID
 CheckProtocolExistenceOnStartup (
   IN  EVENT_PROVIDER  *This,
   IN  EFI_GUID        *Protocol
+  );
+
+// ----------------------------------------------------------------------------
+/**
+ * Начинает отслеживание установки новых экземпляров протокола.
+*/
+EFI_STATUS
+SubscribeToProtocolInstallation (
+  IN OUT EVENT_PROVIDER  *This,
+  IN     EFI_GUID        *ProtocolGuid
+  );
+
+// ----------------------------------------------------------------------------
+/**
+ * Вызывается при установке протокола в БД.
+*/
+VOID
+EFIAPI
+ProtocolInstalledCallback (
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
   );
 
 // -----------------------------------------------------------------------------
@@ -123,13 +159,30 @@ EventProvider_Construct(
                   sizeof(EVENT_PROVIDER_DATA_STRUCT),
                   &This->Data
                   );
-  if (EFI_ERROR(Status)) {
-    return EFI_OUT_OF_RESOURCES;
-  }
+  RETURN_ON_ERR (Status)
 
   EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
-  Vector_Construct (&DataStruct->EventHandles,       sizeof(EFI_EVENT),  1024);
-  Vector_Construct (&DataStruct->LoadedImageHandles, sizeof(EFI_HANDLE), 64);
+
+  Status = Vector_Construct (
+            &DataStruct->EventHandles,
+            sizeof(EFI_EVENT),
+            1024
+            );
+  RETURN_ON_ERR (Status)
+
+  Status = Vector_Construct (
+            &DataStruct->LoadedImageHandles,
+            sizeof(EFI_HANDLE),
+            64
+            );
+  RETURN_ON_ERR (Status)
+
+  Status = Vector_Construct (
+            &DataStruct->Contexts,
+            sizeof(NOTIFY_FUNCTION_CONTEXT),
+            1024
+            );
+  RETURN_ON_ERR (Status)
 
   return EFI_SUCCESS;
 }
@@ -150,6 +203,7 @@ EventProvider_Destruct (
     EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
     Vector_Destruct (&DataStruct->EventHandles);
     Vector_Destruct (&DataStruct->LoadedImageHandles);
+    Vector_Destruct (&DataStruct->Contexts);
 
     gBS->FreePool(This->Data);
     This->Data = 0;
@@ -186,14 +240,14 @@ EventProvider_Start (
     CheckProtocolExistenceOnStartup (This, Guid);
   };
 
-  //EFI_STATUS  Status;
   while (TRUE) {
     GetProtocolGuid (&Guid);
     if (Guid == NULL) {
       break;
     }
-    //Status = SubscribeToProtocolInstallation (This, &Protocols[I]); // <-------- TODO
-  //  RETURN_ON_ERR (Status)
+
+    Status = SubscribeToProtocolInstallation (This, Guid);
+    RETURN_ON_ERR (Status)
   }
 
 
@@ -249,9 +303,10 @@ DetectImagesLoadedOnStartup (
 
   EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
 
-  for (UINTN Index = 0; Index < HandleCount; Index++) {
+  for (UINTN Index = 0; Index < HandleCount; ++Index) {
     // Создаём начальный слепок БД образов, загруженных до нас.
-    Vector_PushBack (&DataStruct->LoadedImageHandles, &Handles[Index]);
+    Status = Vector_PushBack (&DataStruct->LoadedImageHandles, &Handles[Index]);
+    RETURN_ON_ERR (Status)
 
     // Генерим событие.
     LOADING_EVENT Event;
@@ -295,6 +350,171 @@ CheckProtocolExistenceOnStartup (
 
 // ----------------------------------------------------------------------------
 /**
+ * Начинает отслеживание установки новых экземпляров протокола.
+*/
+EFI_STATUS
+SubscribeToProtocolInstallation (
+  IN OUT EVENT_PROVIDER  *This,
+  IN     EFI_GUID        *ProtocolGuid
+  )
+{
+  EFI_STATUS   Status;
+  EFI_EVENT    EventProtocolAppeared;
+  VOID         *Registration;
+
+  NOTIFY_FUNCTION_CONTEXT Context;
+  Context.This = This;
+  Context.Guid = ProtocolGuid;
+
+  EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
+  Status = Vector_PushBack (&DataStruct->Contexts, &Context);
+  RETURN_ON_ERR (Status)
+
+  NOTIFY_FUNCTION_CONTEXT *ContextPointer = (NOTIFY_FUNCTION_CONTEXT *)Vector_GetLast (&DataStruct->Contexts);
+
+  Status = gBS->CreateEvent (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  ProtocolInstalledCallback,
+                  ContextPointer,
+                  &EventProtocolAppeared
+                  );
+  RETURN_ON_ERR (Status)
+
+  Status = gBS->RegisterProtocolNotify (
+                  ProtocolGuid,
+                  EventProtocolAppeared,
+                  &Registration
+                  );
+  RETURN_ON_ERR (Status)
+
+  Status = Vector_PushBack (&DataStruct->EventHandles, &EventProtocolAppeared);
+  RETURN_ON_ERR (Status)
+
+  return EFI_SUCCESS;
+}
+
+// ----------------------------------------------------------------------------
+/**
+ * Вызывается при установке протокола в БД.
+*/
+VOID
+EFIAPI
+ProtocolInstalledCallback (
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
+  )
+{
+  NOTIFY_FUNCTION_CONTEXT *ContextData = (NOTIFY_FUNCTION_CONTEXT *)Context;
+  EVENT_PROVIDER *This = ContextData->This;
+  EFI_GUID       *Guid = ContextData->Guid;
+
+  LOADING_EVENT Event;
+
+  if (CompareGuid (Guid, &gEfiLoadedImageProtocolGuid)) {
+    // LogEntry.Type = LOG_ENTRY_TYPE_IMAGE_LOADED;
+    // DetectEntryImageNames (This, &LogEntry);
+  } else {
+    // LogEntry.Type                           = LOG_ENTRY_TYPE_PROTOCOL_INSTALLED;
+    // LogEntry.ProtocolInstalled.ProtocolName = Protocol->Name;
+  }
+
+  This->AddEvent(This->ExternalData, &Event);
+}
+
+// ----------------------------------------------------------------------------
+/**
+ * Возвращает список хэндлов исполняемых образов, установленных с момента прошлого вызова.
+ * Пользователь должен освободить память под возвращаемый функцией массив.
+ *
+ * @retval NULL             Что-то пошло не так.
+ * @return Массив, последний элемент которого NULL
+*/
+EFI_HANDLE *
+GetNewLoadedImageHandles (
+  IN EVENT_PROVIDER  *This
+  )
+{
+  EFI_STATUS  Status;
+  UINTN       HandleCount;
+  EFI_HANDLE  *Handles = 0;
+
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  &gEfiLoadedImageProtocolGuid,
+                  NULL,
+                  &HandleCount,
+                  &Handles
+                  );
+  if (EFI_ERROR (Status)) {
+    return NULL;
+  }
+
+  EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
+
+  // Сначала получаем количество новых хэндлов, имеющих установленный LoadedImageProtocol:
+  UINTN NewImageHandleCount = 0;
+
+  for (UINTN Index = 0; Index < HandleCount; ++Index) {
+
+    BOOLEAN HandleStored = FALSE;
+    FOR_EACH_VCT (EFI_HANDLE, StoredHandle, DataStruct->LoadedImageHandles) {
+      if (Handles[Index] == *StoredHandle) {
+        HandleStored = TRUE;
+        break;
+      }
+    }
+
+    if (!HandleStored) {
+      ++NewImageHandleCount;
+    }
+  }
+
+  // Затем выделяем память под количество новых хэндлов + 1 (для NULL):
+  EFI_HANDLE *NewHandles = NULL;
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  (NewImageHandleCount + 1) * sizeof(EFI_HANDLE),
+                  (VOID **)&NewHandles
+                  );
+  if (EFI_ERROR (Status)) {
+    SHELL_FREE_NON_NULL (Handles);
+    return NULL;
+  }
+
+  UINTN NewHandleIndex = 0;
+
+  // Сначала ищем количество новых хэндлов с LoadedImageProtocol:
+  for (UINTN Index = 0; Index < HandleCount; ++Index) {
+
+    BOOLEAN HandleStored = FALSE;
+    FOR_EACH_VCT (EFI_HANDLE, StoredHandle, DataStruct->LoadedImageHandles) {
+      if (Handles[Index] == *StoredHandle) {
+        HandleStored = TRUE;
+        break;
+      }
+    }
+
+    if (!HandleStored) {
+      // По идее, такого быть не должно. Но на всякий случай.
+      if (NewHandleIndex >= NewImageHandleCount) {
+        SHELL_FREE_NON_NULL (Handles);
+        return NULL;
+      }
+
+      // Сохраняем и туда и туда.
+      NewHandles[NewHandleIndex++] = Handles[Index];
+      Vector_PushBack (&DataStruct->LoadedImageHandles, &Handles[Index]);
+    }
+  }
+
+  NewHandles[NewHandleIndex] = NULL;
+  SHELL_FREE_NON_NULL (Handles);
+  return NewHandles;
+}
+
+// ----------------------------------------------------------------------------
+/**
  * По хэндлу образа находит его имя и имя образа-родителя.
  * Указатели, возвращённые через OUT-параметры впоследствии требуется освободить.
 */
@@ -311,13 +531,13 @@ GetHandleImageNameAndParentImageName (
 
   EFI_LOADED_IMAGE_PROTOCOL *LoadedImage;
   Status = gBS->OpenProtocol (
-              Handle,
-              &gEfiLoadedImageProtocolGuid,
-              (VOID **)&LoadedImage,
-              gImageHandle,
-              NULL,
-              EFI_OPEN_PROTOCOL_GET_PROTOCOL
-              );
+                  Handle,
+                  &gEfiLoadedImageProtocolGuid,
+                  (VOID **)&LoadedImage,
+                  gImageHandle,
+                  NULL,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
   if (EFI_ERROR (Status)) {
     *ParentImageName = StrAllocCopy (L"<ERROR: can\'t open the EFI_LOADED_IMAGE_PROTOCOL for the image>");
     return;
@@ -341,13 +561,13 @@ GetHandleImageName (
 
   EFI_LOADED_IMAGE_PROTOCOL *LoadedImage;
   Status = gBS->OpenProtocol (
-              Handle,
-              &gEfiLoadedImageProtocolGuid,
-              (VOID **)&LoadedImage,
-              gImageHandle,
-              NULL,
-              EFI_OPEN_PROTOCOL_GET_PROTOCOL
-              );
+                  Handle,
+                  &gEfiLoadedImageProtocolGuid,
+                  (VOID **)&LoadedImage,
+                  gImageHandle,
+                  NULL,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
   if (EFI_ERROR (Status)) {
     *ImageName = StrAllocCopy (L"<ERROR: can\'t open the EFI_LOADED_IMAGE_PROTOCOL for the image>");
     return;
@@ -380,7 +600,7 @@ StrAllocCopy (
   Status = gBS->AllocatePool (
                   EfiBootServicesData,
                   Len * sizeof(CHAR16),
-                  (VOID *)&StrCopy
+                  (VOID **)&StrCopy
                   );
   if (EFI_ERROR (Status)) {
     return NULL;
@@ -398,6 +618,7 @@ StrAllocCopy (
 // ----------------------------------------------------------------------------
 /**
   Взято из ShellPkg, возвращает имя модуля для тех из них что входят в состав образа.
+
   Function to find the file name associated with a LoadedImageProtocol.
 
   @param[in] LoadedImage     An instance of LoadedImageProtocol.
