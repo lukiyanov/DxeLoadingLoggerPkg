@@ -17,5 +17,4 @@
   UefiBootServicesTableLib
 
   VectorLib
-  ProtocolGuidDatabaseLib
   EventProviderLib
