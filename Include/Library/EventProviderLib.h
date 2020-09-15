@@ -4,7 +4,6 @@
  */
 #include <Uefi.h>
 #include <Library/LoadingEvent.h>
-#include <Library/VectorLib.h>
 
 #ifndef EVENT_PROVIDER_LIB_H_
 #define EVENT_PROVIDER_LIB_H_
@@ -54,7 +53,7 @@ EventProvider_Construct(
  */
 VOID
 EventProvider_Destruct (
-  EVENT_PROVIDER *This
+  IN OUT  EVENT_PROVIDER  *This
   );
 
 // -----------------------------------------------------------------------------
@@ -66,7 +65,7 @@ EventProvider_Destruct (
  */
 EFI_STATUS
 EventProvider_Start (
-  EVENT_PROVIDER *This
+  IN OUT  EVENT_PROVIDER  *This
   );
 
 // -----------------------------------------------------------------------------
@@ -75,7 +74,7 @@ EventProvider_Start (
  */
 VOID
 EventProvider_Stop (
-  EVENT_PROVIDER *This
+  IN OUT  EVENT_PROVIDER  *This
   );
 
 // -----------------------------------------------------------------------------

@@ -4,8 +4,8 @@
  */
 #include <Uefi.h>
 
-#ifndef VECTOR_LIB_H_
-#define VECTOR_LIB_H_
+#ifndef PROTOCOL_GUID_DATABASE_LIB_H_
+#define PROTOCOL_GUID_DATABASE_LIB_H_
 
 // -----------------------------------------------------------------------------
 /**
@@ -39,4 +39,4 @@ GetProtocolGuid (
 
 // -----------------------------------------------------------------------------
 
-#endif // VECTOR_LIB_H_
+#endif // PROTOCOL_GUID_DATABASE_LIB_H_

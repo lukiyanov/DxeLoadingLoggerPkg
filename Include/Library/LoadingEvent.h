@@ -6,28 +6,34 @@
 #ifndef LOG_EVENTS_H_
 #define LOG_EVENTS_H_
 
-#define LOG_ENTRY_IMAGE_NAME_LENGTH 64
-
 // ----------------------------------------------------------------------------
 typedef enum {
   LOG_ENTRY_TYPE_PROTOCOL_INSTALLED            = 0,
-  LOG_ENTRY_TYPE_PROTOCOL_REMOVED              = 1,
-  LOG_ENTRY_TYPE_IMAGE_LOADED                  = 2,
-  LOG_ENTRY_TYPE_BDS_STAGE_ENTERED             = 3
+  LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP    = 1,
+  LOG_ENTRY_TYPE_PROTOCOL_REMOVED              = 2,
+  LOG_ENTRY_TYPE_IMAGE_LOADED                  = 3,
+  LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP       = 4,
+  LOG_ENTRY_TYPE_BDS_STAGE_ENTERED             = 5
 } LOG_ENTRY_TYPE;
 
 // ----------------------------------------------------------------------------
 typedef PACKED struct {
   GUID    Guid;
   BOOLEAN Successful;
-  CHAR8   ImageName[LOG_ENTRY_IMAGE_NAME_LENGTH];
+  CHAR16  *ImageName;
 } LOG_ENTRY_PROTOCOL_INSTALLED, LOG_ENTRY_PROTOCOL_REMOVED;
 
 // ----------------------------------------------------------------------------
 typedef PACKED struct {
-  CHAR8 ImageName       [LOG_ENTRY_IMAGE_NAME_LENGTH];
-  CHAR8 ParentImageName [LOG_ENTRY_IMAGE_NAME_LENGTH];
-} LOG_ENTRY_IMAGE_LOADED;
+  GUID    Guid;
+  CHAR16  *ImageNames;
+} LOG_ENTRY_PROTOCOL_EXISTS_ON_STARTUP;
+
+// ----------------------------------------------------------------------------
+typedef PACKED struct {
+  CHAR16  *ImageName;
+  CHAR16  *ParentImageName;
+} LOG_ENTRY_IMAGE_LOADED, LOG_ENTRY_IMAGE_EXISTS_ON_STARTUP;
 
 // ----------------------------------------------------------------------------
 typedef enum {
@@ -44,12 +50,23 @@ typedef PACKED struct {
 typedef PACKED struct {
   LOG_ENTRY_TYPE Type;
   union {
-    LOG_ENTRY_PROTOCOL_INSTALLED  ProtocolInstalled;
-    LOG_ENTRY_PROTOCOL_REMOVED    ProtocolRemove;
-    LOG_ENTRY_IMAGE_LOADED        ImageLoaded;
-    LOG_ENTRY_BDS_STAGE_ENTERED   BdsStage;
+    LOG_ENTRY_PROTOCOL_INSTALLED          ProtocolInstalled;
+    LOG_ENTRY_PROTOCOL_EXISTS_ON_STARTUP  ProtocolExistsOnStartup;
+    LOG_ENTRY_PROTOCOL_REMOVED            ProtocolRemove;
+    LOG_ENTRY_IMAGE_LOADED                ImageLoaded;
+    LOG_ENTRY_IMAGE_EXISTS_ON_STARTUP     ImageExistsOnStartup;
+    LOG_ENTRY_BDS_STAGE_ENTERED           BdsStageEntered;
   };
 } LOADING_EVENT;
+
+// ----------------------------------------------------------------------------
+/**
+ * Корректно освобождает память из-под всех указателей в Event, не равных NULL.
+*/
+VOID
+LoadingEvent_Destruct (
+  LOADING_EVENT *Event
+  );
 
 // ----------------------------------------------------------------------------
 
