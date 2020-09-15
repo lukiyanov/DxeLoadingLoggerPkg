@@ -1,18 +1,21 @@
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = LoggerLib
+  BASE_NAME                      = EventLoggerLib
   FILE_GUID                      = F916FE94-2684-448D-BE05-76DDE6912196
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = LoggerLib | DXE_DRIVER UEFI_APPLICATION UEFI_DRIVER
+  LIBRARY_CLASS                  = EventLoggerLib | DXE_DRIVER UEFI_APPLICATION UEFI_DRIVER
 
 [Sources]
-  LoggerLib.c
+  EventLoggerLib.c
 
 [Packages]
   MdePkg/MdePkg.dec
   DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.dec
 
 [LibraryClasses]
+  UefiBootServicesTableLib
+
   VectorLib
   ProtocolGuidDatabaseLib
+  EventProviderLib

@@ -1,32 +1,5 @@
-/** @file
- * Содержит описание типа EVENT_PROVIDER и набор операций над ним.
- * Объекты типа генерируют события, связанные с загрузкой системы.
- */
-#include <Uefi.h>
-#include <Library/LoadingEvent.h>
-#include <Library/VectorLib.h>
-
-#ifndef EVENT_PROVIDER_LIB_H_
-#define EVENT_PROVIDER_LIB_H_
-
-// -----------------------------------------------------------------------------
-typedef
-VOID
-(*ADD_EVENT) (
-  IN VOID           *ExternalData,  // Получаем извне и передаём без изменений.
-  IN LOADING_EVENT  *Event          // Произошедшее событие.
-  );
-
-// -----------------------------------------------------------------------------
-typedef struct
-{
-  // Зависит от реализации.
-  VOID *Data;
-  // Функция обратного вызова, вызывается при появлении нового события.
-  ADD_EVENT AddEvent;
-  // Данные для AddEvent, которые мы получаем извне.
-  VOID *ExternalData;
-} EVENT_PROVIDER;
+#include <Library/EventProviderLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 
 // -----------------------------------------------------------------------------
 /**
@@ -45,7 +18,10 @@ EventProvider_Construct(
   IN OUT EVENT_PROVIDER  *This,
   IN     ADD_EVENT       AddEvent,
   IN     VOID            *ExternalData
-  );
+  )
+{
+  return EFI_SUCCESS;
+}
 
 // -----------------------------------------------------------------------------
 /**
@@ -55,7 +31,10 @@ EventProvider_Construct(
 VOID
 EventProvider_Destruct (
   EVENT_PROVIDER *This
-  );
+  )
+{
+  ;
+}
 
 // -----------------------------------------------------------------------------
 /**
@@ -67,7 +46,10 @@ EventProvider_Destruct (
 EFI_STATUS
 EventProvider_Start (
   EVENT_PROVIDER *This
-  );
+  )
+{
+  return EFI_SUCCESS;
+}
 
 // -----------------------------------------------------------------------------
 /**
@@ -76,8 +58,9 @@ EventProvider_Start (
 VOID
 EventProvider_Stop (
   EVENT_PROVIDER *This
-  );
+  )
+{
+  ;
+}
 
 // -----------------------------------------------------------------------------
-
-#endif // EVENT_PROVIDER_LIB_H_

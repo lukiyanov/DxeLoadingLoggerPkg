@@ -1,7 +1,7 @@
 #include <Uefi.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/BaseLib.h>
-#include <Library/LoggerLib.h>
+#include <Library/EventLoggerLib.h>
 #include <Protocol/SimpleFileSystem.h>
 
 // #include "guid_db.h"
@@ -9,7 +9,7 @@
 
 // ----------------------------------------------------------------------------
 #define RETURN_ON_ERR(Status) if (EFI_ERROR (Status)) { return Status; }
-#define UNICODE_BUFFER_SIZE 256
+#define UNICODE_BUFFER_SIZE LOG_ENTRY_IMAGE_NAME_LENGTH
 
 static LOGGER gLogger;
 
@@ -167,7 +167,7 @@ ShowLogAndCleanup (
   // BOOLEAN LoadedImagesAfterUs = FALSE;
   // UINTN SpacesCount;
 
-  // FOR_EACH_VCT(LOG_ENTRY, entry, Log->LogData) {
+  // FOR_EACH_VCT(LOADING_EVENT, entry, Log->LogData) {
   //   switch (entry->Type) {
   //   case LOG_ENTRY_TYPE_PROTOCOL_INSTALLED:
   //     PrintToLog(L"- PROTOCOL-INSTALLED: ");

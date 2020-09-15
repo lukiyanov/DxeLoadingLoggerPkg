@@ -7,9 +7,22 @@
   BUILD_TARGETS                  = DEBUG | RELEASE
   FLASH_DEFINITION               = DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.fdf
 
-  DEFINE DEBUG_PRINT_ERROR_LEVEL    = 0x80000040
-  DEFINE DEBUG_PROPERTY_MASK        = 0x0f
+  #
+  # Определяет, каким способом происходит сбор событий.
+  #
+  # TRUE:
+  #        События собираются путём модификации gST.
+  #        Этот подход даёт больше информации, но системная прошивка может сопротивляться данному методу.
+  #
+  # FALSE:
+  #        События собираются посредством вызова RegisterProtocolNotify() для известных протоколов.
+  #        Гарантированно совместим со всеми прошивками, но даёт гораздо меньше информации.
+  #
+  DEFINE EVENT_PROVIDER_GST_HOOK = FALSE  # TODO: в RELEASE-версии установить в TRUE
 
+
+  DEFINE DEBUG_PRINT_ERROR_LEVEL = 0x80000040
+  DEFINE DEBUG_PROPERTY_MASK     = 0x0f
 
 [PcdsFixedAtBuild]
   # DebugLib
@@ -18,7 +31,7 @@
 
 
 [BuildOptions]
-  #GCC:*_*_*_CC_FLAGS                   = -std=c11
+  GCC:*_*_*_CC_FLAGS                   = -std=c11
   GCC:RELEASE_*_*_CC_FLAGS             = -DMDEPKG_NDEBUG
   MSFT:RELEASE_*_*_CC_FLAGS            = /D MDEPKG_NDEBUG
 
@@ -48,7 +61,14 @@
   #
   VectorLib                   | DxeLoadingLoggerPkg/Library/VectorLib/VectorLib.inf
   ProtocolGuidDatabaseLib     | DxeLoadingLoggerPkg/Library/ProtocolGuidDatabaseLib/ProtocolGuidDatabaseLib.inf
-  LoggerLib                   | DxeLoadingLoggerPkg/Library/LoggerLib/LoggerLib.inf
+  EventLoggerLib              | DxeLoadingLoggerPkg/Library/EventLoggerLib/EventLoggerLib.inf
+
+!if $(EVENT_PROVIDER_GST_HOOK)
+#  EventProviderLib            | DxeLoadingLoggerPkg/Library/EventProviderLib/EventProviderSystemTableHookLib/EventProviderSystemTableHookLib.inf
+!else
+  EventProviderLib            | DxeLoadingLoggerPkg/Library/EventProviderLib/EventProviderProtocolNotifyLib/EventProviderProtocolNotifyLib.inf
+!endif
+
 
 [Components]
   DxeLoadingLoggerPkg/Source/DxeLoadingLogger.inf
