@@ -4,6 +4,8 @@
 #include <Library/EventProviderLib.h>
 #include <Library/ProtocolGuidDatabaseLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/PcdLib.h>
+#include <Library/UefiLib.h>
 
 // -----------------------------------------------------------------------------
 /**
@@ -132,11 +134,18 @@ AddEventToLog (
 {
   DBG_ENTER ();
 
+  static UINTN EventCount;
   LOGGER *This = (LOGGER *)Logger;
 
   EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
   Vector_PushBack (&This->LogData, Event);
   gBS->RestoreTPL (OldTpl);
+
+  if (FeaturePcdGet (PcdPrintEventNumbersToConsole)) {
+    if (gST->ConOut) {
+      Print(L"---- event #%u\n", (unsigned)++EventCount);
+    }
+  }
 
   DBG_INFO1 ("---- Event received: --------------------------------------\n");
   DEBUG_CODE_BEGIN ();
