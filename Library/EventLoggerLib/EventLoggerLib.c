@@ -135,73 +135,73 @@ AddEventToLog (
   Vector_PushBack (&This->LogData, Event);
   gBS->RestoreTPL (OldTpl);
 
-  DBG_INFO1 ("---- Event received: --------------------------------------");
+  DBG_INFO1 ("\n---- Event received: --------------------------------------\n");
   DEBUG_CODE_BEGIN ();
 
   switch (Event->Type)
   {
   case LOG_ENTRY_TYPE_PROTOCOL_INSTALLED:
-    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_INSTALLED");
-    DBG_INFO  ("Guid:             %g", &Event->ProtocolInstalled.Guid);
-    DBG_INFO  ("ImageName(s):     %s", Event->ProtocolInstalled.ImageName);
+    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_INSTALLED\n");
+    DBG_INFO  ("Guid:             %g\n", &Event->ProtocolInstalled.Guid);
+    DBG_INFO  ("ImageName(s):     %s\n", Event->ProtocolInstalled.ImageName);
     if (Event->ProtocolInstalled.Successful) {
-      DBG_INFO1 ("Successful:       TRUE");
+      DBG_INFO1 ("Successful:       TRUE\n");
     } else {
-      DBG_INFO1 ("Successful:       FALSE");
+      DBG_INFO1 ("Successful:       FALSE\n");
     }
     break;
 
   case LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP:
-    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP");
-    DBG_INFO  ("Guid:             %g", &Event->ProtocolExistsOnStartup.Guid);
-    DBG_INFO  ("ImageName(s):     %s", Event->ProtocolExistsOnStartup.ImageNames);
+    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP\n");
+    DBG_INFO  ("Guid:             %g\n", &Event->ProtocolExistsOnStartup.Guid);
+    DBG_INFO  ("ImageName(s):     %s\n", Event->ProtocolExistsOnStartup.ImageNames);
     break;
 
   case LOG_ENTRY_TYPE_PROTOCOL_REMOVED:
-    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_REMOVED");
-    DBG_INFO  ("Guid:             %g", &Event->ProtocolRemoved.Guid);
-    DBG_INFO  ("ImageName(s):     %s", Event->ProtocolRemoved.ImageName);
+    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_REMOVED\n");
+    DBG_INFO  ("Guid:             %g\n", &Event->ProtocolRemoved.Guid);
+    DBG_INFO  ("ImageName(s):     %s\n", Event->ProtocolRemoved.ImageName);
     if (Event->ProtocolRemoved.Successful) {
-      DBG_INFO1 ("Successful:       TRUE");
+      DBG_INFO1 ("Successful:       TRUE\n");
     } else {
-      DBG_INFO1 ("Successful:       FALSE");
+      DBG_INFO1 ("Successful:       FALSE\n");
     }
     break;
 
   case LOG_ENTRY_TYPE_IMAGE_LOADED:
-    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_IMAGE_LOADED");
-    DBG_INFO  ("ImageName:        %s", Event->ImageLoaded.ImageName);
-    DBG_INFO  ("ParentImageName:  %s", Event->ImageLoaded.ParentImageName);
+    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_IMAGE_LOADED\n");
+    DBG_INFO  ("ImageName:        %s\n", Event->ImageLoaded.ImageName);
+    DBG_INFO  ("ParentImageName:  %s\n", Event->ImageLoaded.ParentImageName);
     break;
 
   case LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP:
-    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP");
-    DBG_INFO  ("ImageName:        %s", Event->ImageExistsOnStartup.ImageName);
-    DBG_INFO  ("ParentImageName:  %s", Event->ImageExistsOnStartup.ParentImageName);
+    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP\n");
+    DBG_INFO  ("ImageName:        %s\n", Event->ImageExistsOnStartup.ImageName);
+    DBG_INFO  ("ParentImageName:  %s\n", Event->ImageExistsOnStartup.ParentImageName);
     break;
 
   case LOG_ENTRY_TYPE_BDS_STAGE_ENTERED:
-    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_BDS_STAGE_ENTERED");
+    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_BDS_STAGE_ENTERED\n");
     switch (Event->BdsStageEntered.SubEvent) {
     case BDS_STAGE_EVENT_BEFORE_ENTRY_CALLING:
-      DBG_INFO1 ("SubType:          BEFORE");
+      DBG_INFO1 ("SubType:          BEFORE\n");
       break;
     case BDS_STAGE_EVENT_AFTER_ENTRY_CALLING:
-      DBG_INFO1 ("SubType:          AFTER");
+      DBG_INFO1 ("SubType:          AFTER\n");
       break;
     default:
-      DBG_INFO1 ("ERROR: Unknown SubEvent type");
+      DBG_INFO1 ("ERROR: Unknown SubEvent type\n");
       break;
     }
     break;
 
   default:
-    DBG_INFO1 ("ERROR: Unknown event type");
+    DBG_INFO1 ("ERROR: Unknown event type\n");
     break;
   }
 
   DEBUG_CODE_END ();
-  DBG_INFO1 ("-----------------------------------------------------------");
+  DBG_INFO1 ("-----------------------------------------------------------\n");
 
   DBG_EXIT ();
 }

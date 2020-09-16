@@ -345,7 +345,7 @@ DetectImagesLoadedOnStartup (
   EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
 
   for (UINTN Index = 0; Index < HandleCount; ++Index) {
-    DBG_INFO ("-- [%a] Detecting image %u/%u name...", __FUNCTION__, (unsigned)Index, (unsigned)HandleCount);
+    DBG_INFO ("-- [%a] Detecting image %u/%u name...\n", __FUNCTION__, (unsigned)Index, (unsigned)HandleCount);
 
     // Сохраняем начальный слепок образов, загруженных до нас.
     Status = Vector_PushBack (&DataStruct->LoadedImageHandles, &Handles[Index]);
