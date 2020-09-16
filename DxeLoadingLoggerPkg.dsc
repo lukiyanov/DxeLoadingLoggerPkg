@@ -29,8 +29,15 @@
   #
   DEFINE DEBUG_OUTPUT_TO_SERIAL  = FALSE
 
+  #
+  # Генерит подробный и длинный лог свой работы.
+  # Только для отладки.
+  #
+  DEFINE DEBUG_MACROS_OUTPUT_ON = TRUE
+
   DEFINE DEBUG_PRINT_ERROR_LEVEL = 0x80000040
   DEFINE DEBUG_PROPERTY_MASK     = 0x0f
+
 
 [PcdsFixedAtBuild]
   # DebugLib
@@ -42,6 +49,12 @@
   GCC:*_*_*_CC_FLAGS                   = -std=c11
   GCC:RELEASE_*_*_CC_FLAGS             = -DMDEPKG_NDEBUG
   MSFT:RELEASE_*_*_CC_FLAGS            = /D MDEPKG_NDEBUG
+
+!if $(DEBUG_MACROS_OUTPUT_ON)
+  GCC:DEBUG_*_*_CC_FLAGS               = -DDEBUG_MACROS_OUTPUT
+  MSFT:DEBUG_*_*_CC_FLAGS              = /D DEBUG_MACROS_OUTPUT
+!endif
+
 
 [LibraryClasses]
   #
