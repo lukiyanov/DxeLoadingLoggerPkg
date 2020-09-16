@@ -43,7 +43,7 @@ typedef enum {
 
 // ----------------------------------------------------------------------------
 typedef PACKED struct {
-  BDS_STAGE_SUB_EVENT_INFO  Event;
+  BDS_STAGE_SUB_EVENT_INFO  SubEvent;
 } LOG_ENTRY_BDS_STAGE_ENTERED;
 
 // ----------------------------------------------------------------------------
@@ -52,7 +52,7 @@ typedef PACKED struct {
   union {
     LOG_ENTRY_PROTOCOL_INSTALLED          ProtocolInstalled;
     LOG_ENTRY_PROTOCOL_EXISTS_ON_STARTUP  ProtocolExistsOnStartup;
-    LOG_ENTRY_PROTOCOL_REMOVED            ProtocolRemove;
+    LOG_ENTRY_PROTOCOL_REMOVED            ProtocolRemoved;
     LOG_ENTRY_IMAGE_LOADED                ImageLoaded;
     LOG_ENTRY_IMAGE_EXISTS_ON_STARTUP     ImageExistsOnStartup;
     LOG_ENTRY_BDS_STAGE_ENTERED           BdsStageEntered;

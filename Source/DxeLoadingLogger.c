@@ -70,6 +70,8 @@ Initialize (
 )
 {
   Logger_Construct (&gLogger);
+  Logger_Start     (&gLogger);
+
 //  UINTN ProtocolCount = sizeof(Protocols) / sizeof(Protocols[0]);
 
 // #ifdef RELEASE_BUILD
