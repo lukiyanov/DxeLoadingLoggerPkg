@@ -20,6 +20,14 @@
   #
   DEFINE EVENT_PROVIDER_GST_HOOK = FALSE  # TODO: в RELEASE-версии установить в TRUE
 
+  #
+  # TRUE:
+  #        Отладочные события выводятся в COM-порт.
+  #
+  # FALSE:
+  #        Отладочные события выводятся на экран.
+  #
+  DEFINE DEBUG_OUTPUT_TO_SERIAL  = FALSE
 
   DEFINE DEBUG_PRINT_ERROR_LEVEL = 0x80000040
   DEFINE DEBUG_PROPERTY_MASK     = 0x0f
@@ -53,8 +61,14 @@
   PcdLib                      | MdePkg/Library/BasePcdLibNull/BasePcdLibNull.inf
   PrintLib                    | MdePkg/Library/BasePrintLib/BasePrintLib.inf
   UefiRuntimeServicesTableLib | MdePkg/Library/UefiRuntimeServicesTableLib/UefiRuntimeServicesTableLib.inf
-  DebugLib                    | MdePkg/Library/UefiDebugLibConOut/UefiDebugLibConOut.inf
   DebugPrintErrorLevelLib     | MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
+
+!if $(DEBUG_OUTPUT_TO_SERIAL)
+  DebugLib                    | MdePkg/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
+  SerialPortLib               | PcAtChipsetPkg/Library/SerialIoLib/SerialIoLib.inf
+!else
+  DebugLib                    | MdePkg/Library/UefiDebugLibConOut/UefiDebugLibConOut.inf
+!endif
 
   #
   # Библиотеки, входящие в состав данного пакета.

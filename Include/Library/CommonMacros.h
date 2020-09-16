@@ -1,7 +1,9 @@
 #include <Uefi.h>
+#include <Library/DebugMacros.h>
 
 #define RETURN_ON_ERR(Status) \
   if (EFI_ERROR (Status)) {   \
+    DBG_EXIT_STATUS (Status); \
     return Status;            \
   }
 

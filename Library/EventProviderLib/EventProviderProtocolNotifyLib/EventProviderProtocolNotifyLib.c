@@ -174,6 +174,8 @@ EventProvider_Construct(
   IN     VOID            *ExternalData
   )
 {
+  DBG_ENTER ();
+
   This->AddEvent     = AddEvent;
   This->ExternalData = ExternalData;
 
@@ -208,6 +210,7 @@ EventProvider_Construct(
             );
   RETURN_ON_ERR (Status)
 
+  DBG_EXIT_STATUS (EFI_SUCCESS);
   return EFI_SUCCESS;
 }
 
@@ -221,6 +224,8 @@ EventProvider_Destruct (
   IN OUT  EVENT_PROVIDER  *This
   )
 {
+  DBG_ENTER ();
+
   EventProvider_Stop (This);
 
   if (This && This->Data) {
@@ -232,6 +237,8 @@ EventProvider_Destruct (
     gBS->FreePool (This->Data);
     This->Data = 0;
   }
+
+  DBG_EXIT ();
 }
 
 // -----------------------------------------------------------------------------
@@ -246,7 +253,10 @@ EventProvider_Start (
   IN OUT EVENT_PROVIDER  *This
   )
 {
+  DBG_ENTER ();
+
   if (This == NULL || This->Data == NULL) {
+    DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
     return EFI_INVALID_PARAMETER;
   }
 
@@ -274,7 +284,7 @@ EventProvider_Start (
     RETURN_ON_ERR (Status)
   }
 
-
+  DBG_EXIT_STATUS (EFI_SUCCESS);
   return EFI_SUCCESS;
 }
 
@@ -287,7 +297,10 @@ EventProvider_Stop (
   IN OUT EVENT_PROVIDER  *This
   )
 {
+  DBG_ENTER ();
+
   if (This == NULL || This->Data == NULL) {
+    DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
     return;
   }
 
@@ -298,6 +311,8 @@ EventProvider_Stop (
     gBS->CloseEvent (*Event);
   }
   Vector_Clear (&DataStruct->EventHandles);
+
+  DBG_EXIT ();
 }
 
 // -----------------------------------------------------------------------------
@@ -310,6 +325,8 @@ DetectImagesLoadedOnStartup (
   IN OUT EVENT_PROVIDER *This
   )
 {
+  DBG_ENTER ();
+
   EFI_STATUS  Status;
   UINTN       HandleCount;
   EFI_HANDLE  *Handles = 0;
@@ -328,7 +345,9 @@ DetectImagesLoadedOnStartup (
   EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
 
   for (UINTN Index = 0; Index < HandleCount; ++Index) {
-    // Создаём начальный слепок БД образов, загруженных до нас.
+    DBG_INFO ("-- [%a] Detecting image %u/%u name...", __FUNCTION__, (unsigned)Index, (unsigned)HandleCount);
+
+    // Сохраняем начальный слепок образов, загруженных до нас.
     Status = Vector_PushBack (&DataStruct->LoadedImageHandles, &Handles[Index]);
     RETURN_ON_ERR (Status)
 
@@ -345,6 +364,7 @@ DetectImagesLoadedOnStartup (
   }
 
   gBS->FreePool (Handles);
+  DBG_EXIT_STATUS (EFI_SUCCESS);
   return EFI_SUCCESS;
 }
 
@@ -358,6 +378,8 @@ CheckProtocolExistenceOnStartup (
   IN EFI_GUID        *Protocol
   )
 {
+  DBG_ENTER ();
+
   EFI_STATUS     Status;
   VOID           *Iface;
 
@@ -370,6 +392,8 @@ CheckProtocolExistenceOnStartup (
 
     This->AddEvent(This->ExternalData, &Event);
   }
+
+  DBG_EXIT ();
 }
 
 // ----------------------------------------------------------------------------
@@ -382,6 +406,8 @@ SubscribeToProtocolInstallation (
   IN     EFI_GUID        *ProtocolGuid
   )
 {
+  DBG_ENTER ();
+
   EFI_STATUS   Status;
   EFI_EVENT    EventProtocolAppeared;
   VOID         *Registration;
@@ -415,6 +441,7 @@ SubscribeToProtocolInstallation (
   Status = Vector_PushBack (&DataStruct->EventHandles, &EventProtocolAppeared);
   RETURN_ON_ERR (Status)
 
+  DBG_EXIT_STATUS (EFI_SUCCESS);
   return EFI_SUCCESS;
 }
 
@@ -429,6 +456,8 @@ ProtocolInstalledCallback (
   IN  VOID       *Context
   )
 {
+  DBG_ENTER ();
+
   NOTIFY_FUNCTION_CONTEXT *ContextData = (NOTIFY_FUNCTION_CONTEXT *)Context;
   EVENT_PROVIDER *This = ContextData->This;
   EFI_GUID       *Guid = ContextData->Guid;
@@ -492,6 +521,7 @@ ProtocolInstalledCallback (
   }
 
   This->AddEvent(This->ExternalData, &Event);
+  DBG_EXIT ();
 }
 
 // ----------------------------------------------------------------------------
@@ -507,6 +537,8 @@ GetNewLoadedImageHandles (
   IN EVENT_PROVIDER  *This
   )
 {
+  DBG_ENTER ();
+
   EFI_STATUS  Status;
   UINTN       HandleCount;
   EFI_HANDLE  *Handles = 0;
@@ -519,6 +551,7 @@ GetNewLoadedImageHandles (
                   &Handles
                   );
   if (EFI_ERROR (Status)) {
+    DBG_EXIT_STATUS (Status);
     return NULL;
   }
 
@@ -551,6 +584,7 @@ GetNewLoadedImageHandles (
                   );
   if (EFI_ERROR (Status)) {
     SHELL_FREE_NON_NULL (Handles);
+    DBG_EXIT_STATUS (Status);
     return NULL;
   }
 
@@ -571,6 +605,7 @@ GetNewLoadedImageHandles (
       // По идее, такого быть не должно. Но на всякий случай.
       if (NewHandleIndex >= NewImageHandleCount) {
         SHELL_FREE_NON_NULL (Handles);
+        DBG_EXIT_STATUS (EFI_BUFFER_TOO_SMALL);
         return NULL;
       }
 
@@ -582,6 +617,7 @@ GetNewLoadedImageHandles (
 
   NewHandles[NewHandleIndex] = NULL;
   SHELL_FREE_NON_NULL (Handles);
+  DBG_EXIT_STATUS (EFI_SUCCESS);
   return NewHandles;
 }
 
@@ -597,6 +633,8 @@ GetHandleImageNameAndParentImageName (
   OUT CHAR16     **ParentImageName
   )
 {
+  DBG_ENTER ();
+
   GetHandleImageName(Handle, ImageName);
 
   EFI_STATUS Status;
@@ -612,10 +650,12 @@ GetHandleImageNameAndParentImageName (
                   );
   if (EFI_ERROR (Status)) {
     *ParentImageName = StrAllocCopy (L"<ERROR: can\'t open the EFI_LOADED_IMAGE_PROTOCOL for the image>");
+    DBG_EXIT_STATUS (Status);
     return;
   }
 
   GetHandleImageName(LoadedImage->ParentHandle, ParentImageName);
+  DBG_EXIT ();
 }
 
 // ----------------------------------------------------------------------------
@@ -629,6 +669,8 @@ GetHandleImageName (
   OUT CHAR16     **ImageName
   )
 {
+  DBG_ENTER ();
+
   EFI_STATUS Status;
 
   EFI_LOADED_IMAGE_PROTOCOL *LoadedImage;
@@ -642,6 +684,7 @@ GetHandleImageName (
                   );
   if (EFI_ERROR (Status)) {
     *ImageName = StrAllocCopy (L"<ERROR: can\'t open the EFI_LOADED_IMAGE_PROTOCOL for the image>");
+    DBG_EXIT_STATUS (Status);
     return;
   }
 
@@ -651,8 +694,11 @@ GetHandleImageName (
   }
   if (*ImageName == NULL) {
     *ImageName = StrAllocCopy (L"<ERROR: can\'t find the image name>");
+    DBG_EXIT_STATUS (EFI_UNSUPPORTED);
     return;
   }
+
+  DBG_EXIT ();
 }
 
 // -----------------------------------------------------------------------------
@@ -665,6 +711,8 @@ StrAllocCopy (
   IN CHAR16 *Str
   )
 {
+  DBG_ENTER ();
+
   UINTN Len = StrLen (Str);
   UINTN BufferLen = Len + 1; // + 1 под L'\0'
   CHAR16 *StrCopy = NULL;
@@ -676,15 +724,18 @@ StrAllocCopy (
                   (VOID **)&StrCopy
                   );
   if (EFI_ERROR (Status)) {
+    DBG_EXIT_STATUS (Status);
     return NULL;
   }
 
   Status = StrCpyS (StrCopy, BufferLen, Str);
   if (EFI_ERROR (Status)) {
     SHELL_FREE_NON_NULL (StrCopy)
+    DBG_EXIT_STATUS (Status);
     return NULL;
   }
 
+  DBG_EXIT_STATUS (EFI_SUCCESS);
   return StrCopy;
 }
 
@@ -699,7 +750,10 @@ StrAllocAppend (
   IN     CHAR16 *StrTail
   )
 {
+  DBG_ENTER ();
+
   if (StrHead == NULL || *StrHead == NULL || StrTail == NULL) {
+    DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
     return;
   }
 
@@ -716,23 +770,27 @@ StrAllocAppend (
                   (VOID **)&NewStr
                   );
   if (EFI_ERROR (Status)) {
+    DBG_EXIT_STATUS (Status);
     return;
   }
 
   Status = StrCpyS (NewStr, BufferLen, *StrHead);
   if (EFI_ERROR (Status)) {
     SHELL_FREE_NON_NULL (NewStr)
+    DBG_EXIT_STATUS (Status);
     return;
   }
 
   Status = StrCpyS (NewStr + HeadLen, BufferLen - HeadLen, StrTail);
   if (EFI_ERROR (Status)) {
     SHELL_FREE_NON_NULL (NewStr)
+    DBG_EXIT_STATUS (Status);
     return;
   }
 
   gBS->FreePool (*StrHead);
   *StrHead = NewStr;
+  DBG_EXIT ();
 }
 
 // ----------------------------------------------------------------------------
@@ -751,6 +809,8 @@ FindLoadedImageFileName (
   IN EFI_LOADED_IMAGE_PROTOCOL *LoadedImage
   )
 {
+  DBG_ENTER ();
+
   EFI_GUID                       *NameGuid;
   EFI_STATUS                     Status;
   EFI_FIRMWARE_VOLUME2_PROTOCOL  *Fv;
@@ -759,12 +819,14 @@ FindLoadedImageFileName (
   UINT32                         AuthenticationStatus;
 
   if ((LoadedImage == NULL) || (LoadedImage->FilePath == NULL)) {
+    DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
     return NULL;
   }
 
   NameGuid = EfiGetNameGuidFromFwVolDevicePathNode((MEDIA_FW_VOL_FILEPATH_DEVICE_PATH *)LoadedImage->FilePath);
 
   if (NameGuid == NULL) {
+    DBG_EXIT_STATUS (EFI_VOLUME_CORRUPTED);
     return NULL;
   }
 
@@ -777,6 +839,7 @@ FindLoadedImageFileName (
   // FirmwareVolume2Protocol is PI, and is not required to be available.
   //
   if (EFI_ERROR (Status)) {
+    DBG_EXIT_STATUS (Status);
     return NULL;
   }
 
@@ -787,6 +850,7 @@ FindLoadedImageFileName (
   Status = Fv->ReadSection(Fv, NameGuid, EFI_SECTION_USER_INTERFACE, 0, &Buffer, &BufferSize, &AuthenticationStatus);
 
   if (EFI_ERROR (Status)) {
+    DBG_EXIT_STATUS (Status);
     return NULL;
   }
 
@@ -794,6 +858,7 @@ FindLoadedImageFileName (
   // ReadSection returns just the section data, without any section header. For
   // a user interface section, the only data is the file name.
   //
+  DBG_EXIT_STATUS (EFI_SUCCESS);
   return Buffer;
 }
 

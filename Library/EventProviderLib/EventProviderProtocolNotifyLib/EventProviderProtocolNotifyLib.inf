@@ -25,3 +25,4 @@
 
 [Protocols]
   gEfiLoadedImageProtocolGuid
+  gEfiFirmwareVolume2ProtocolGuid
