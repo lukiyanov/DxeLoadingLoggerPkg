@@ -1,3 +1,4 @@
+#include <Library/CommonMacros.h>
 #include <Library/ProtocolGuidDatabaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include "GeneratedProtocolGuidDatabase.h"
@@ -31,7 +32,10 @@ GetProtocolName (
   IN EFI_GUID *Guid
   )
 {
+DBG_ENTER ();
+
   if (Guid == NULL) {
+    DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
     return NULL;
   }
 
@@ -39,10 +43,12 @@ GetProtocolName (
   // Но потери в скорости из-за линейного поиска не критичны.
   for (UINTN Index = 0; Index < KNOWN_GUID_COUNT; ++Index) {
     if (CompareGuid (Guid, gProtocolDatabase[Index].Guid)) {
+      DBG_EXIT_STATUS (EFI_SUCCESS);
       return gProtocolDatabase[Index].Name;
     }
   }
 
+  DBG_EXIT_STATUS (EFI_NOT_FOUND);
   return NULL;
 }
 
@@ -60,13 +66,11 @@ GetProtocolGuid (
   IN OUT EFI_GUID **Guid
   )
 {
-  if (Guid == NULL) {
-    *Guid = NULL;
-    return;
-  }
+  DBG_ENTER ();
 
   if (Guid < &gProtocolDatabase[0].Guid || Guid > &gProtocolDatabase[KNOWN_GUID_COUNT - 1].Guid) {
     *Guid = NULL;
+    DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
     return;
   }
 
@@ -77,6 +81,8 @@ GetProtocolGuid (
   } else {
     *Guid = (EFI_GUID *)(((UINT8 *)(*Guid)) + sizeof(KNOWN_PROTOCOL_DB_ENTRY));
   }
+
+  DBG_EXIT ();
 }
 
 // -----------------------------------------------------------------------------
