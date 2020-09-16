@@ -82,6 +82,19 @@ ProtocolInstalledCallback (
   IN  VOID       *Context
   );
 
+// ----------------------------------------------------------------------------
+/**
+ * Возвращает список хэндлов исполняемых образов, установленных с момента прошлого вызова.
+ * Пользователь должен освободить память под возвращаемый функцией массив.
+ *
+ * @retval NULL             Что-то пошло не так.
+ * @return Массив, последний элемент которого NULL
+*/
+EFI_HANDLE *
+GetNewLoadedImageHandles (
+  IN EVENT_PROVIDER  *This
+  );
+
 // -----------------------------------------------------------------------------
 /**
  * По хэндлу образа находит его имя и имя образа-родителя.
@@ -113,6 +126,17 @@ GetHandleImageName (
 CHAR16 *
 StrAllocCopy (
   IN CHAR16 *Str
+  );
+
+// -----------------------------------------------------------------------------
+/**
+ * Добавляет к первой строке вторую, выделяя память под результат и освобождая предыдущую память под StrHead.
+ * В случае неудачи оставляет без изменений.
+*/
+VOID
+StrAllocAppend (
+  IN OUT CHAR16 **StrHead,
+  IN     CHAR16 *StrTail
   );
 
 // ----------------------------------------------------------------------------
@@ -205,7 +229,7 @@ EventProvider_Destruct (
     Vector_Destruct (&DataStruct->LoadedImageHandles);
     Vector_Destruct (&DataStruct->Contexts);
 
-    gBS->FreePool(This->Data);
+    gBS->FreePool (This->Data);
     This->Data = 0;
   }
 }
@@ -401,7 +425,7 @@ SubscribeToProtocolInstallation (
 VOID
 EFIAPI
 ProtocolInstalledCallback (
-  IN  EFI_EVENT  Event,
+  IN  EFI_EVENT  EfiEvent,
   IN  VOID       *Context
   )
 {
@@ -412,11 +436,59 @@ ProtocolInstalledCallback (
   LOADING_EVENT Event;
 
   if (CompareGuid (Guid, &gEfiLoadedImageProtocolGuid)) {
-    // LogEntry.Type = LOG_ENTRY_TYPE_IMAGE_LOADED;
-    // DetectEntryImageNames (This, &LogEntry);
+    Event.Type = LOG_ENTRY_TYPE_IMAGE_LOADED;
+
+    EFI_HANDLE *NewHandles = GetNewLoadedImageHandles(This);
+    if (NewHandles == NULL) {
+      // Ошибка во время детекта новых образов.
+      Event.ImageLoaded.ImageName       = StrAllocCopy (L"<ERROR: new images detecting error>");
+      Event.ImageLoaded.ParentImageName = NULL;
+
+    } else if (NewHandles[0] == NULL) {
+      // Не удалось найти кандидатов.
+      Event.ImageLoaded.ImageName = StrAllocCopy (L"<ERROR: no new images>");
+      Event.ImageLoaded.ParentImageName = NULL;
+
+    } else if (NewHandles[1] == NULL) {
+      // Только один кандидат.
+      GetHandleImageNameAndParentImageName (
+        NewHandles[0],
+        &Event.ImageLoaded.ImageName,
+        &Event.ImageLoaded.ParentImageName
+        );
+
+    } else {
+      // Несколько кандидатов.
+      Event.ImageLoaded.ImageName       = StrAllocCopy (L"One of: | ");
+      Event.ImageLoaded.ParentImageName = StrAllocCopy (L"One of: | ");
+
+      for (UINTN Index = 0; NewHandles[Index] != NULL; ++Index) {
+        CHAR16 *CurrentImageName       = NULL;
+        CHAR16 *CurrentImageParentName = NULL;
+
+        GetHandleImageNameAndParentImageName (
+          NewHandles[Index],
+          &CurrentImageName,
+          &CurrentImageParentName
+          );
+
+        StrAllocAppend(&Event.ImageLoaded.ImageName,       CurrentImageName);
+        StrAllocAppend(&Event.ImageLoaded.ParentImageName, CurrentImageParentName);
+
+        StrAllocAppend(&Event.ImageLoaded.ImageName,       L" | ");
+        StrAllocAppend(&Event.ImageLoaded.ParentImageName, L" | ");
+
+        SHELL_FREE_NON_NULL (CurrentImageName);
+        SHELL_FREE_NON_NULL (CurrentImageParentName);
+      }
+    }
+
+    SHELL_FREE_NON_NULL (NewHandles);
   } else {
-    // LogEntry.Type                           = LOG_ENTRY_TYPE_PROTOCOL_INSTALLED;
-    // LogEntry.ProtocolInstalled.ProtocolName = Protocol->Name;
+    Event.Type = LOG_ENTRY_TYPE_PROTOCOL_INSTALLED;
+    Event.ProtocolInstalled.Guid       = *Guid;
+    Event.ProtocolInstalled.ImageName  = NULL; // Данная реализация EventProvider не детектит это.
+    Event.ProtocolInstalled.Successful = TRUE; // Если нас вызвали, то протокол успешно установлен.
   }
 
   This->AddEvent(This->ExternalData, &Event);
@@ -594,25 +666,73 @@ StrAllocCopy (
   )
 {
   UINTN Len = StrLen (Str);
+  UINTN BufferLen = Len + 1; // + 1 под L'\0'
   CHAR16 *StrCopy = NULL;
 
   EFI_STATUS Status;
   Status = gBS->AllocatePool (
                   EfiBootServicesData,
-                  Len * sizeof(CHAR16),
+                  BufferLen * sizeof(CHAR16),
                   (VOID **)&StrCopy
                   );
   if (EFI_ERROR (Status)) {
     return NULL;
   }
 
-  Status = StrCpyS (StrCopy, Len, Str);
+  Status = StrCpyS (StrCopy, BufferLen, Str);
   if (EFI_ERROR (Status)) {
     SHELL_FREE_NON_NULL (StrCopy)
     return NULL;
   }
 
   return StrCopy;
+}
+
+// -----------------------------------------------------------------------------
+/**
+ * Добавляет к первой строке вторую, выделяя память под результат и освобождая предыдущую память под StrHead.
+ * В случае неудачи оставляет без изменений.
+*/
+VOID
+StrAllocAppend (
+  IN OUT CHAR16 **StrHead,
+  IN     CHAR16 *StrTail
+  )
+{
+  if (StrHead == NULL || *StrHead == NULL || StrTail == NULL) {
+    return;
+  }
+
+  UINTN HeadLen   = StrLen (*StrHead);
+  UINTN TailLen   = StrLen (StrTail);
+  UINTN TotalLen  = HeadLen + TailLen;
+  UINTN BufferLen = TotalLen + 1; // +1 под L'\0'
+  CHAR16 *NewStr = NULL;
+
+  EFI_STATUS Status;
+  Status = gBS->AllocatePool (
+                  EfiBootServicesData,
+                  BufferLen * sizeof(CHAR16),
+                  (VOID **)&NewStr
+                  );
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  Status = StrCpyS (NewStr, BufferLen, *StrHead);
+  if (EFI_ERROR (Status)) {
+    SHELL_FREE_NON_NULL (NewStr)
+    return;
+  }
+
+  Status = StrCpyS (NewStr + HeadLen, BufferLen - HeadLen, StrTail);
+  if (EFI_ERROR (Status)) {
+    SHELL_FREE_NON_NULL (NewStr)
+    return;
+  }
+
+  gBS->FreePool (*StrHead);
+  *StrHead = NewStr;
 }
 
 // ----------------------------------------------------------------------------
