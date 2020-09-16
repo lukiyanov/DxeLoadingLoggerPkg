@@ -7,6 +7,8 @@
   BUILD_TARGETS                  = DEBUG | RELEASE
   FLASH_DEFINITION               = DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.fdf
 
+  #### BEHAVIOR ################################################################
+
   #
   # Определяет, каким способом происходит сбор событий.
   #
@@ -21,6 +23,20 @@
   DEFINE EVENT_PROVIDER_GST_HOOK = FALSE  # TODO: в RELEASE-версии установить в TRUE
 
   #
+  # Выводить номера событий в консоль.
+  # Полезно для сопоставления событий с тем, что выводит системная прошивка.
+  #
+  DEFINE PRINT_EVENT_NUMBERS_TO_CONSOLE = TRUE
+
+  #### DEBUG ###################################################################
+
+  #
+  # Генерит подробный и длинный лог свой работы.
+  # Только для отладки.
+  #
+  DEFINE DEBUG_MACROS_OUTPUT_ON = FALSE
+
+  #
   # TRUE:
   #        Отладочные события выводятся в COM-порт.
   #
@@ -28,12 +44,6 @@
   #        Отладочные события выводятся на экран.
   #
   DEFINE DEBUG_OUTPUT_TO_SERIAL  = FALSE
-
-  #
-  # Генерит подробный и длинный лог свой работы.
-  # Только для отладки.
-  #
-  DEFINE DEBUG_MACROS_OUTPUT_ON = FALSE
 
   DEFINE DEBUG_PRINT_ERROR_LEVEL = 0x80000040
   DEFINE DEBUG_PROPERTY_MASK     = 0x0f
@@ -99,3 +109,10 @@
 
 [Components]
   DxeLoadingLoggerPkg/Source/DxeLoadingLogger.inf
+
+[PcdsFeatureFlag]
+!if $(PRINT_EVENT_NUMBERS_TO_CONSOLE)
+  gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole | TRUE
+!else
+  gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole | FALSE
+!endif

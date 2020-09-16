@@ -6,3 +6,9 @@
 
 [Includes]
   Include
+
+[Guids]
+  gDxeLoadingLoggerSpaceGuid = { 0x83483450, 0xF5ED, 0x477F, { 0x80, 0xF2, 0xBA, 0x3C, 0xC7, 0x5D, 0x84, 0x92 } }
+
+[PcdsFeatureFlag]
+  gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole | FALSE | BOOLEAN | 1
