@@ -264,22 +264,15 @@ EventProvider_Start (
   Status = DetectImagesLoadedOnStartup (This);
   RETURN_ON_ERR (Status)
 
-  EFI_GUID *Guid = NULL;
-  while (TRUE) {
-    GetProtocolGuid (&Guid);
-    if (Guid == NULL) {
-      break;
-    }
+  UINTN KnownProtocolGuidCount = GetProtocolGuidCount();
 
+  for (UINTN Index = 0; Index < KnownProtocolGuidCount; ++Index) {
+    EFI_GUID *Guid = GetProtocolGuid(Index);
     CheckProtocolExistenceOnStartup (This, Guid);
-  };
+  }
 
-  while (TRUE) {
-    GetProtocolGuid (&Guid);
-    if (Guid == NULL) {
-      break;
-    }
-
+  for (UINTN Index = 0; Index < KnownProtocolGuidCount; ++Index) {
+    EFI_GUID *Guid = GetProtocolGuid(Index);
     Status = SubscribeToProtocolInstallation (This, Guid);
     RETURN_ON_ERR (Status)
   }
@@ -345,7 +338,7 @@ DetectImagesLoadedOnStartup (
   EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
 
   for (UINTN Index = 0; Index < HandleCount; ++Index) {
-    DBG_INFO ("-- [%a] Detecting image %u/%u name...\n", __FUNCTION__, (unsigned)Index, (unsigned)HandleCount);
+    DBG_INFO ("-- Detecting image %u/%u name...\n", (unsigned)(Index + 1), (unsigned)HandleCount);
 
     // Сохраняем начальный слепок образов, загруженных до нас.
     Status = Vector_PushBack (&DataStruct->LoadedImageHandles, &Handles[Index]);
@@ -384,6 +377,8 @@ CheckProtocolExistenceOnStartup (
   VOID           *Iface;
 
   Status = gBS->LocateProtocol (Protocol, NULL, &Iface);
+  DBG_INFO ("-- Protocol %g exists: %u\n", Protocol, (unsigned)(!EFI_ERROR (Status)));
+
   if (! EFI_ERROR (Status)) {
     LOADING_EVENT  Event;
     Event.Type                               = LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP;
@@ -407,6 +402,7 @@ SubscribeToProtocolInstallation (
   )
 {
   DBG_ENTER ();
+  DBG_INFO ("-- Subscribing for %g\n", ProtocolGuid);
 
   EFI_STATUS   Status;
   EFI_EVENT    EventProtocolAppeared;

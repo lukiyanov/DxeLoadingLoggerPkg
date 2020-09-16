@@ -54,33 +54,39 @@ DBG_ENTER ();
 
 // -----------------------------------------------------------------------------
 /**
- * Позволяет перечислить все занесённые в БД GUIDы протоколов.
+ * Возвращает количество известных GUID.
  *
- * @param Guid  В этот параметр функция заносит:
- *              - GUID первого известного протокола, если *Guid == NULL
- *              - GUID следующего протокола, если *Guid указывает на один из протоколов БД
- *              - NULL, если все протоколы были перечислены, либо если *Guid не указывает на протокол БД.
+ * @retval Количество известных GUID.
  */
-VOID
+UINTN
+GetProtocolGuidCount ()
+{
+  return KNOWN_GUID_COUNT;
+}
+
+// -----------------------------------------------------------------------------
+/**
+ * Возвращает указатель на GUID протокола с индексом Index.
+ *
+ * @param Index  Индекс протокола в БД.
+ *
+ * @retval NULL  Индекс выходит за пределы [0 .. GetProtocolGuidCount()]
+ * @retval Указатель на GUID протокола с указанным индексом.
+ */
+EFI_GUID *
 GetProtocolGuid (
-  IN OUT EFI_GUID **Guid
+  IN UINTN Index
   )
 {
   DBG_ENTER ();
 
-  if (Guid < &gProtocolDatabase[0].Guid || Guid > &gProtocolDatabase[KNOWN_GUID_COUNT - 1].Guid) {
-    *Guid = NULL;
+  if (Index >= KNOWN_GUID_COUNT) {
     DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
-    return;
+    return NULL;
   }
 
-  if (*Guid == NULL) {
-    *Guid = gProtocolDatabase[0].Guid;
-  } else if (*Guid == gProtocolDatabase[KNOWN_GUID_COUNT - 1].Guid) {
-    *Guid = NULL;
-  } else {
-    *Guid = (EFI_GUID *)(((UINT8 *)(*Guid)) + sizeof(KNOWN_PROTOCOL_DB_ENTRY));
-  }
+  DBG_INFO ("-- Protocol GUID index: %u/%u\n", (unsigned)Index + 1, KNOWN_GUID_COUNT);
+  return gProtocolDatabase[Index].Guid;
 
   DBG_EXIT ();
 }
