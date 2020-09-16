@@ -1,7 +1,8 @@
 #include <Uefi.h>
+#include <Library/CommonMacros.h>
 #include <Library/EventLoggerLib.h>
 #include <Library/EventProviderLib.h>
-#include <Library/CommonMacros.h>
+#include <Library/ProtocolGuidDatabaseLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
 // -----------------------------------------------------------------------------
@@ -140,11 +141,18 @@ AddEventToLog (
   DBG_INFO1 ("---- Event received: --------------------------------------\n");
   DEBUG_CODE_BEGIN ();
 
+  CHAR16 *GuidName = NULL;
+
   switch (Event->Type)
   {
   case LOG_ENTRY_TYPE_PROTOCOL_INSTALLED:
+    GuidName = GetProtocolName(&Event->ProtocolInstalled.Guid);
     DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_INSTALLED\n");
-    DBG_INFO  ("Guid:             %g\n", &Event->ProtocolInstalled.Guid);
+    if (GuidName == NULL) {
+      DBG_INFO  ("Guid:             %g\n", &Event->ProtocolInstalled.Guid);
+    } else {
+      DBG_INFO  ("Guid:             %s\n", GuidName);
+    }
     DBG_INFO  ("ImageName(s):     %s\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.ImageName));
     if (Event->ProtocolInstalled.Successful) {
       DBG_INFO1 ("Successful:       TRUE\n");
@@ -154,14 +162,24 @@ AddEventToLog (
     break;
 
   case LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP:
+    GuidName = GetProtocolName(&Event->ProtocolExistsOnStartup.Guid);
     DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP\n");
-    DBG_INFO  ("Guid:             %g\n", &Event->ProtocolExistsOnStartup.Guid);
+    if (GuidName == NULL) {
+      DBG_INFO  ("Guid:             %g\n", &Event->ProtocolExistsOnStartup.Guid);
+    } else {
+      DBG_INFO  ("Guid:             %s\n", GuidName);
+    }
     DBG_INFO  ("ImageName(s):     %s\n", DBG_STR_NO_NULL (Event->ProtocolExistsOnStartup.ImageNames));
     break;
 
   case LOG_ENTRY_TYPE_PROTOCOL_REMOVED:
+    GuidName = GetProtocolName(&Event->ProtocolRemoved.Guid);
     DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_REMOVED\n");
-    DBG_INFO  ("Guid:             %g\n", &Event->ProtocolRemoved.Guid);
+    if (GuidName == NULL) {
+      DBG_INFO  ("Guid:             %g\n", &Event->ProtocolRemoved.Guid);
+    } else {
+      DBG_INFO  ("Guid:             %s\n", GuidName);
+    }
     DBG_INFO  ("ImageName(s):     %s\n", DBG_STR_NO_NULL (Event->ProtocolRemoved.ImageName));
     if (Event->ProtocolRemoved.Successful) {
       DBG_INFO1 ("Successful:       TRUE\n");
