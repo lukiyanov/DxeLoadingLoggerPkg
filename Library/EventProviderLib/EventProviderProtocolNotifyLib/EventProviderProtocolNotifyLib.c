@@ -190,23 +190,25 @@ EventProvider_Construct(
   EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
 
   Status = Vector_Construct (
-            &DataStruct->EventHandles,
-            sizeof(EFI_EVENT),
-            1024
-            );
-  RETURN_ON_ERR (Status)
-
-  Status = Vector_Construct (
             &DataStruct->LoadedImageHandles,
             sizeof(EFI_HANDLE),
             64
             );
   RETURN_ON_ERR (Status)
 
+  UINTN KnownProtocolCount = GetProtocolGuidCount();
+
+  Status = Vector_Construct (
+            &DataStruct->EventHandles,
+            sizeof(EFI_EVENT),
+            KnownProtocolCount
+            );
+  RETURN_ON_ERR (Status)
+
   Status = Vector_Construct (
             &DataStruct->Contexts,
             sizeof(NOTIFY_FUNCTION_CONTEXT),
-            1024
+            KnownProtocolCount
             );
   RETURN_ON_ERR (Status)
 
@@ -261,8 +263,8 @@ EventProvider_Start (
   }
 
   EFI_STATUS Status;
-  Status = DetectImagesLoadedOnStartup (This);
-  RETURN_ON_ERR (Status)
+ Status = DetectImagesLoadedOnStartup (This);
+ RETURN_ON_ERR (Status)
 
   UINTN KnownProtocolGuidCount = GetProtocolGuidCount();
 
@@ -408,13 +410,15 @@ SubscribeToProtocolInstallation (
   EFI_EVENT    EventProtocolAppeared;
   VOID         *Registration;
 
-  NOTIFY_FUNCTION_CONTEXT Context;
-  Context.This = This;
-  Context.Guid = ProtocolGuid;
-
   EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
-  Status = Vector_PushBack (&DataStruct->Contexts, &Context);
-  RETURN_ON_ERR (Status)
+  {
+    NOTIFY_FUNCTION_CONTEXT Context;
+    Context.This = This;
+    Context.Guid = ProtocolGuid;
+
+    Status = Vector_PushBack (&DataStruct->Contexts, &Context);
+    RETURN_ON_ERR (Status)
+  }
 
   NOTIFY_FUNCTION_CONTEXT *ContextPointer = (NOTIFY_FUNCTION_CONTEXT *)Vector_GetLast (&DataStruct->Contexts);
 

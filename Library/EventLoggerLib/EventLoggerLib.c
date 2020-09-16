@@ -117,6 +117,8 @@ Logger_Stop (
   DBG_EXIT ();
 }
 
+#define DBG_STR_NO_NULL(Pointer) ((Pointer) ? (Pointer) : (L"<NONE>"))
+
 // -----------------------------------------------------------------------------
 /**
  * Функции обратного вызова, вызов происходит при поступлении события.
@@ -135,7 +137,7 @@ AddEventToLog (
   Vector_PushBack (&This->LogData, Event);
   gBS->RestoreTPL (OldTpl);
 
-  DBG_INFO1 ("\n---- Event received: --------------------------------------\n");
+  DBG_INFO1 ("---- Event received: --------------------------------------\n");
   DEBUG_CODE_BEGIN ();
 
   switch (Event->Type)
@@ -143,7 +145,7 @@ AddEventToLog (
   case LOG_ENTRY_TYPE_PROTOCOL_INSTALLED:
     DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_INSTALLED\n");
     DBG_INFO  ("Guid:             %g\n", &Event->ProtocolInstalled.Guid);
-    DBG_INFO  ("ImageName(s):     %s\n", Event->ProtocolInstalled.ImageName);
+    DBG_INFO  ("ImageName(s):     %s\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.ImageName));
     if (Event->ProtocolInstalled.Successful) {
       DBG_INFO1 ("Successful:       TRUE\n");
     } else {
@@ -154,13 +156,13 @@ AddEventToLog (
   case LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP:
     DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP\n");
     DBG_INFO  ("Guid:             %g\n", &Event->ProtocolExistsOnStartup.Guid);
-    DBG_INFO  ("ImageName(s):     %s\n", Event->ProtocolExistsOnStartup.ImageNames);
+    DBG_INFO  ("ImageName(s):     %s\n", DBG_STR_NO_NULL (Event->ProtocolExistsOnStartup.ImageNames));
     break;
 
   case LOG_ENTRY_TYPE_PROTOCOL_REMOVED:
     DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_REMOVED\n");
     DBG_INFO  ("Guid:             %g\n", &Event->ProtocolRemoved.Guid);
-    DBG_INFO  ("ImageName(s):     %s\n", Event->ProtocolRemoved.ImageName);
+    DBG_INFO  ("ImageName(s):     %s\n", DBG_STR_NO_NULL (Event->ProtocolRemoved.ImageName));
     if (Event->ProtocolRemoved.Successful) {
       DBG_INFO1 ("Successful:       TRUE\n");
     } else {
@@ -170,14 +172,14 @@ AddEventToLog (
 
   case LOG_ENTRY_TYPE_IMAGE_LOADED:
     DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_IMAGE_LOADED\n");
-    DBG_INFO  ("ImageName:        %s\n", Event->ImageLoaded.ImageName);
-    DBG_INFO  ("ParentImageName:  %s\n", Event->ImageLoaded.ParentImageName);
+    DBG_INFO  ("ImageName:        %s\n", DBG_STR_NO_NULL (Event->ImageLoaded.ImageName));
+    DBG_INFO  ("ParentImageName:  %s\n", DBG_STR_NO_NULL (Event->ImageLoaded.ParentImageName));
     break;
 
   case LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP:
     DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP\n");
-    DBG_INFO  ("ImageName:        %s\n", Event->ImageExistsOnStartup.ImageName);
-    DBG_INFO  ("ParentImageName:  %s\n", Event->ImageExistsOnStartup.ParentImageName);
+    DBG_INFO  ("ImageName:        %s\n", DBG_STR_NO_NULL (Event->ImageExistsOnStartup.ImageName));
+    DBG_INFO  ("ParentImageName:  %s\n", DBG_STR_NO_NULL (Event->ImageExistsOnStartup.ParentImageName));
     break;
 
   case LOG_ENTRY_TYPE_BDS_STAGE_ENTERED:
