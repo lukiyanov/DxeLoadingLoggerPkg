@@ -236,3 +236,90 @@ AddEventToLog (
 }
 
 // -----------------------------------------------------------------------------
+/**
+ * Возвращает текущее количество находящихся в логе событий.
+ */
+UINTN
+Logger_GetEventCount(
+  IN LOGGER *This
+  )
+{
+  DBG_ENTER ();
+  EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
+  UINTN EventCount = Vector_Size (&This->LogData);
+  gBS->RestoreTPL (OldTpl);
+
+  DBG_EXIT ();
+  return EventCount;
+}
+
+// -----------------------------------------------------------------------------
+/**
+ * Возвращает находящееся в логе событие с индексом Index.
+ *
+ * @param  This    Структура лога, над которой выполняется действие.
+ * @param  Index   Индекс события в логе, должен быть в пределах [0, Logger_GetEventCount() - 1]
+ * @param  Event   Записывает туда указанное событие.
+ *
+ * @retval EFI_SUCCESS           Операция завершена успешно.
+ * @return EFI_INVALID_PARAMETER Index >= Logger_GetEventCount()
+ */
+EFI_STATUS
+Logger_GetEvent(
+  IN  LOGGER        *This,
+  IN  UINTN         Index,
+  OUT LOADING_EVENT *ResultEvent
+  )
+{
+  DBG_ENTER ();
+
+  EFI_STATUS Success;
+  EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
+
+  LOADING_EVENT *Event = Vector_Get(&This->LogData, Index);
+  if (Event == NULL) {
+    Success = EFI_INVALID_PARAMETER;
+  } else {
+    *ResultEvent = *Event;
+    Success = EFI_SUCCESS;
+  }
+
+  gBS->RestoreTPL (OldTpl);
+  DBG_EXIT_STATUS (Success);
+  return Success;
+}
+
+// -----------------------------------------------------------------------------
+/**
+ * Удаляет все события, хранимые в логе, но только в случае если их количество равно EventCount.
+ * При этом сбор событий не прекращается.
+ * При длительном использовании потребитель должен время от времени вызывать
+ * данную функцию чтобы ограничить потребление памяти.
+ */
+BOOLEAN
+Logger_ClearEvents(
+  IN OUT LOGGER *This,
+  IN     UINTN  ExpectedEventCount
+  )
+{
+  DBG_ENTER ();
+  EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
+
+  BOOLEAN Success;
+
+  UINTN EventCount = Vector_Size (&This->LogData);
+  if (EventCount == ExpectedEventCount) {
+    // Потребитель знает об актуальном количестве событий,
+    // т.е. он обработал их все и с тех пор как он обработал последнее событие новых не поступило.
+    Vector_Clear (&This->LogData);
+    Success = TRUE;
+  } else {
+    Success = FALSE;
+  }
+
+  gBS->RestoreTPL (OldTpl);
+  DBG_EXIT_STATUS (Success ? EFI_SUCCESS : EFI_ACCESS_DENIED);
+  return Success;
+}
+
+// -----------------------------------------------------------------------------
