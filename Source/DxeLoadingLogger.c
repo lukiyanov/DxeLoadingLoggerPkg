@@ -72,6 +72,14 @@ Initialize (
   Logger_Construct (&gLogger);
   Logger_Start     (&gLogger);
 
+  // Извне gLogger вызывать:
+  //   GetLogEventCount()
+  //   GetLogEvent(Index)
+
+  // Никаких коллбэков! Данный файл ждёт когда записть в файл будет доступна и ведёт её,
+  // запоминая индекс последнего успешно залогированного события.
+
+
 //  UINTN ProtocolCount = sizeof(Protocols) / sizeof(Protocols[0]);
 
 // #ifdef RELEASE_BUILD

@@ -1,4 +1,4 @@
-#include <Library/CommonMacros.h>
+#include <Library/CommonMacrosLib.h>
 #include <Library/ProtocolGuidDatabaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include "GeneratedProtocolGuidDatabase.h"

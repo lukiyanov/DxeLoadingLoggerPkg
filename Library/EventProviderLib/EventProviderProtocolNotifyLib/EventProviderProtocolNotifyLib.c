@@ -13,7 +13,7 @@
 #include <Library/EventProviderLib.h>
 #include <Library/VectorLib.h>
 #include <Library/ProtocolGuidDatabaseLib.h>
-#include <Library/CommonMacros.h>
+#include <Library/CommonMacrosLib.h>
 
 // -----------------------------------------------------------------------------
 /// EVENT_PROVIDER -> Data

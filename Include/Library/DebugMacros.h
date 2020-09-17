@@ -17,32 +17,21 @@
 
 #define DBG_PRINT_LEVEL         EFI_D_INFO
 
-#ifdef DEBUG_MACROS_OUTPUT
+BOOLEAN
+CommonMacrosEnabled();
 
-#define DBG_PRINT(...)          DEBUG((DBG_PRINT_LEVEL, ## __VA_ARGS__))
+#define DBG_IF_ENABLED(x)           if (CommonMacrosEnabled ()) { x; }
 
-#define DBG_ERROR(_format_,...)     DEBUG((EFI_D_ERROR, WHERESTR _format_, WHEREARG, __VA_ARGS__))
-#define DBG_ERROR1(_format_)        DEBUG((EFI_D_ERROR, WHERESTR _format_, WHEREARG))
-#define DBG_INFO(_format_,...)      DEBUG((EFI_D_INFO, WHERESTR _format_, WHEREARG, __VA_ARGS__))
-#define DBG_INFO1(_format_)         DEBUG((EFI_D_INFO, WHERESTR _format_, WHEREARG))
+#define DBG_PRINT(...)              DBG_IF_ENABLED (DEBUG((DBG_PRINT_LEVEL, ## __VA_ARGS__)))
 
-#define DBG_ENTER()             DBG_PRINT(ENTERSTR "\n", WHEREARG)
-#define DBG_EXIT_STATUS(Status) DBG_PRINT(EXITSTR "Status: %r\n", WHEREARG, Status)
-#define DBG_EXIT()              DBG_PRINT(EXITSTR "\n", WHEREARG)
+#define DBG_ERROR(_format_,...)     DBG_IF_ENABLED (DEBUG((EFI_D_ERROR, WHERESTR _format_, WHEREARG, __VA_ARGS__)))
+#define DBG_ERROR1(_format_)        DBG_IF_ENABLED (DEBUG((EFI_D_ERROR, WHERESTR _format_, WHEREARG)))
+#define DBG_INFO(_format_,...)      DBG_IF_ENABLED (DEBUG((EFI_D_INFO, WHERESTR _format_, WHEREARG, __VA_ARGS__)))
+#define DBG_INFO1(_format_)         DBG_IF_ENABLED (DEBUG((EFI_D_INFO, WHERESTR _format_, WHEREARG)))
 
-#else
+#define DBG_ENTER()                 DBG_IF_ENABLED (DBG_PRINT(ENTERSTR "\n", WHEREARG))
+#define DBG_EXIT_STATUS(Status)     DBG_IF_ENABLED (DBG_PRINT(EXITSTR "Status: %r\n", WHEREARG, Status))
+#define DBG_EXIT()                  DBG_IF_ENABLED (DBG_PRINT(EXITSTR "\n", WHEREARG))
 
-#define DBG_PRINT(...)
-
-#define DBG_ERROR(_format_,...)
-#define DBG_ERROR1(_format_)
-#define DBG_INFO(_format_,...)
-#define DBG_INFO1(_format_)
-
-#define DBG_ENTER()
-#define DBG_EXIT_STATUS(Status)
-#define DBG_EXIT()
-
-#endif // GENERATE_DEBUG_LOG
 
 #endif // DEBUG_MACROS_H__

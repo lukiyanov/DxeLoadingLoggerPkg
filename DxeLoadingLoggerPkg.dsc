@@ -60,11 +60,6 @@
   GCC:RELEASE_*_*_CC_FLAGS             = -DMDEPKG_NDEBUG
   MSFT:RELEASE_*_*_CC_FLAGS            = /D MDEPKG_NDEBUG
 
-!if $(DEBUG_MACROS_OUTPUT_ON)
-  GCC:DEBUG_*_*_CC_FLAGS               = -DDEBUG_MACROS_OUTPUT
-  MSFT:DEBUG_*_*_CC_FLAGS              = /D DEBUG_MACROS_OUTPUT
-!endif
-
 
 [LibraryClasses]
   #
@@ -99,6 +94,7 @@
   VectorLib                   | DxeLoadingLoggerPkg/Library/VectorLib/VectorLib.inf
   ProtocolGuidDatabaseLib     | DxeLoadingLoggerPkg/Library/ProtocolGuidDatabaseLib/ProtocolGuidDatabaseLib.inf
   EventLoggerLib              | DxeLoadingLoggerPkg/Library/EventLoggerLib/EventLoggerLib.inf
+  CommonMacrosLib             | DxeLoadingLoggerPkg/Library/CommonMacrosLib/CommonMacrosLib.inf
 
 !if $(EVENT_PROVIDER_GST_HOOK)
 #  EventProviderLib            | DxeLoadingLoggerPkg/Library/EventProviderLib/EventProviderSystemTableHookLib/EventProviderSystemTableHookLib.inf
@@ -115,4 +111,10 @@
   gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole | TRUE
 !else
   gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole | FALSE
+!endif
+
+!if $(DEBUG_MACROS_OUTPUT_ON)
+  gDxeLoadingLoggerSpaceGuid.PcdDebugMacrosOutputEnabled | TRUE
+!else
+  gDxeLoadingLoggerSpaceGuid.PcdDebugMacrosOutputEnabled | FALSE
 !endif
