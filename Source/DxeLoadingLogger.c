@@ -1,57 +1,102 @@
 #include <Uefi.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/BaseLib.h>
+#include <Library/UefiLib.h>
+#include <Library/PcdLib.h>
 #include <Library/EventLoggerLib.h>
 #include <Library/CommonMacrosLib.h>
+#include <Library/VectorLib.h>
 
 #include <Protocol/SimpleFileSystem.h>
 
 
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 static LOGGER             gLogger;
 static EFI_FILE_PROTOCOL  *gLogFileProtocol;
+static VECTOR             gPreviousFsHandles;
 
+static GLOBAL_REMOVE_IF_UNREFERENCED EFI_EVENT  gEventUpdateLog;
 
-// ----------------------------------------------------------------------------
-EFI_STATUS
-ExecuteFunctionOnProtocolAppearance (
-  IN  EFI_GUID         *ProtocolGuid,
-  IN  EFI_EVENT_NOTIFY CallbackFunction
-  );
-
+// -----------------------------------------------------------------------------
+/**
+ * Проверяет существование новых событий и при наличии обрабатывает их.
+ * Взаимоисключающий способ обработки событий с ProcessNewEvent().
+*/
 VOID
 EFIAPI
-ShowLogAndCleanup (
-  IN  EFI_EVENT  Event,
-  IN  VOID       *Context
+CheckAndProcessNewEvents (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   );
 
-// VOID
-// ShowAndWriteLog (
-//   IN  DxeLoadingLog *DxeLoadingLogInstance
-//   );
-
+// -----------------------------------------------------------------------------
+/**
+ * Обрабатывает поступление нового события.
+ * Взаимоисключающий способ обработки событий с CheckAndProcessNewEvents().
+*/
 VOID
-PrintToConsole (
-  IN  CHAR16  *Str
+ProcessNewEvent (
+  IN LOADING_EVENT *Event
   );
 
-VOID
-PrintToLog (
-  IN  CHAR16  *Str
+// -----------------------------------------------------------------------------
+/**
+ * Дописывает конкретное событие в лог.
+ *
+ * @retval TRUE   Информация о событии успешно дописана в лог.
+ * @retval FALSE  Ошибка записи, информация о событии не записана.
+*/
+BOOLEAN
+AddNewEventToLog (
+  IN LOADING_EVENT      *Event,
+  IN EFI_FILE_PROTOCOL  *gLogFileProtocol
   );
 
+// -----------------------------------------------------------------------------
+/**
+ * Пытается создать лог-файл.
+ * В случае успеха возвращает указатель на протокол, с помощью которого можно вести запись данного файла.
+ *
+ * @param LogFileProtocol  Протокол, с помощью которого можно вести запись лог-файла.
+ *
+ * @retval EFI_SUCCESS     Файловая система найдена, результат записан в LogFileProtocol.
+ * @retval Что-то другое.  Какая-то ошибка, LogFileProtocol остался без изменений.
+*/
 EFI_STATUS
 FindFileSystem (
   OUT  EFI_FILE_PROTOCOL  **LogFileProtocol
   );
 
+// -----------------------------------------------------------------------------
+/**
+ * Проверяет, есть ли среди Handles новые хэндлы.
+ *
+ * @param Handles     Массив хэндлов.
+ * @param HandleCount Количество элементов в Handles.
+ *
+ * @retval TRUE   Обнаружены новые хэндлы.
+ * @retval FALSE  Новых нет.
+*/
+BOOLEAN
+CheckForNewFsHandles(
+  IN EFI_HANDLE  *Handles,
+  IN UINTN       HandleCount
+  );
+
+// -----------------------------------------------------------------------------
+/**
+ * Корректно закрывает FileProtocol, если это ещё не было сделано.
+*/
 VOID
-CloseLogFile (
+FlushAndCloseFileProtocol (
+  IN OUT EFI_FILE_PROTOCOL **FileProtocol
   );
 
 
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+/**
+ * Точка входа драйвера.
+*/
 EFI_STATUS
 EFIAPI
 Initialize (
@@ -59,46 +104,113 @@ Initialize (
   IN  EFI_SYSTEM_TABLE   *SystemTable
   )
 {
-  Logger_Construct (&gLogger);
+  DBG_ENTER ();
+
+  if (FeaturePcdGet (PcdFlushEveryEventEnabled)) {
+    Logger_Construct (&gLogger, &ProcessNewEvent);
+  } else {
+    Logger_Construct (&gLogger, NULL);
+
+    EFI_STATUS Status;
+
+    Status = gBS->CreateEvent (
+                    EVT_TIMER | EVT_NOTIFY_SIGNAL,
+                    TPL_NOTIFY,
+                    CheckAndProcessNewEvents,
+                    NULL,
+                    &gEventUpdateLog
+                    );
+    RETURN_ON_ERR (Status);
+
+    Status = gBS->SetTimer (
+                    gEventUpdateLog,
+                    TimerPeriodic,
+                    EFI_TIMER_PERIOD_MILLISECONDS (1000)
+                    );
+    RETURN_ON_ERR (Status);
+  }
+
+  Vector_Construct (&gPreviousFsHandles, sizeof(EFI_HANDLE), 32);
   Logger_Start     (&gLogger);
 
+  DBG_EXIT_STATUS (EFI_SUCCESS);
   return EFI_SUCCESS;
 }
 
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+/**
+ * Вызывается при необходимости выгрузить драйвер из памяти.
+*/
 EFI_STATUS
 EFIAPI
 Unload (
   IN EFI_HANDLE ImageHandle
   )
 {
-  // CloseLogFile ();
-  Logger_Destruct (&gLogger);
+  DBG_ENTER ();
 
+  // CloseLogFile ();
+
+  if (FeaturePcdGet (PcdFlushEveryEventEnabled)) {
+    gBS->CloseEvent (gEventUpdateLog);
+  }
+
+  Logger_Destruct (&gLogger);
+  Vector_Destruct (&gPreviousFsHandles);
+
+  FlushAndCloseFileProtocol(&gLogFileProtocol);
+
+  DBG_EXIT_STATUS (EFI_SUCCESS);
   return EFI_SUCCESS;
 }
 
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+/**
+ * Проверяет существование новых событий и при наличии обрабатывает их.
+ * Взаимоисключающий способ обработки событий с ProcessNewEvent().
+*/
 VOID
 EFIAPI
-ShowLogAndCleanup (
-  IN  EFI_EVENT  Event,
-  IN  VOID       *Context
+CheckAndProcessNewEvents (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
-  gBS->CloseEvent (Event);
+  // DBG_ENTER ();
 
-  //DxeLoadingLog_QuitObserving(&gLoadingLogInstance);
+  //
+  // TODO
+  //
 
-  PrintToConsole(L"Writing the log...\r\n");
-  //ShowAndWriteLog(&gLoadingLogInstance);
-  CloseLogFile();
-  PrintToConsole(L"Done writing the log.\r\n");
-
-  //DxeLoadingLog_Destruct(&gLoadingLogInstance);
+  // DBG_EXIT ();
 }
 
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+/**
+ * Обрабатывает поступление нового события.
+ * Взаимоисключающий способ обработки событий с CheckAndProcessNewEvents().
+*/
+VOID
+ProcessNewEvent (
+  LOADING_EVENT *Event
+  )
+{
+  DBG_ENTER ()
+
+  if (gLogFileProtocol == NULL) {
+    EFI_STATUS Status;
+    Status = FindFileSystem (&gLogFileProtocol);
+    if (EFI_ERROR (Status)) {
+      DBG_EXIT_STATUS (EFI_NOT_READY);
+      return;
+    }
+  }
+
+  DBG_INFO1 ("TODO: write the event to the log\n");
+  DBG_EXIT ();
+}
+
+// -----------------------------------------------------------------------------
 // VOID
 // ShowAndWriteLog (
 //   IN  DxeLoadingLog *Log
@@ -166,54 +278,55 @@ ShowLogAndCleanup (
 //   PrintToLog(L"-- End --\r\n");
 // }
 
-// ----------------------------------------------------------------------------
-VOID
-PrintToConsole (
-  IN  CHAR16  *Str
-  )
-{
-  if (gST->ConOut) {
-    gST->ConOut->OutputString(gST->ConOut, Str);
-  }
-}
+// -----------------------------------------------------------------------------
+// VOID
+// PrintToLog (
+//   IN  CHAR16  *Str
+//   )
+// {
+//   if (gLogFileProtocol == NULL) {
+//     FindFileSystem (&gLogFileProtocol);
+//   }
 
-// ----------------------------------------------------------------------------
-VOID
-PrintToLog (
-  IN  CHAR16  *Str
-  )
-{
-  if (gLogFileProtocol == NULL) {
-    FindFileSystem (&gLogFileProtocol);
-  }
+//   if (gLogFileProtocol) {
+//     UINTN Length = StrLen(Str) * sizeof(CHAR16);
 
-  if (gLogFileProtocol) {
-    UINTN Length = StrLen(Str) * sizeof(CHAR16);
+//     gLogFileProtocol->Write(
+//       gLogFileProtocol,
+//       &Length,
+//       Str
+//       );
 
-    gLogFileProtocol->Write(
-      gLogFileProtocol,
-      &Length,
-      Str
-      );
+//     // Это очень замедляет запись лога, но защищает от внезапных перезагрузок.
+//     // gLogFileProtocol->Flush(
+//     //   gLogFileProtocol
+//     //   );
+//   }
+// }
 
-    // Это очень замедляет запись лога, но защищает от внезапных перезагрузок.
-    // gLogFileProtocol->Flush(
-    //   gLogFileProtocol
-    //   );
-  }
-}
-
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+/**
+ * Пытается создать лог-файл.
+ * В случае успеха возвращает указатель на протокол, с помощью которого можно вести запись данного файла.
+ *
+ * @param LogFileProtocol  Протокол, с помощью которого можно вести запись лог-файла.
+ *
+ * @retval EFI_SUCCESS     Файловая система найдена, результат записан в LogFileProtocol.
+ * @retval Что-то другое.  Какая-то ошибка, LogFileProtocol остался без изменений.
+*/
 EFI_STATUS
 FindFileSystem (
   OUT  EFI_FILE_PROTOCOL  **LogFileProtocol
   )
 {
+  DBG_ENTER ()
+
+  // Принцип поиска: выбираем первую же файловую систему,
+  // содержащую в корне файл "log.txt" и доступную для записи.
+
   EFI_STATUS  Status;
   UINTN       HandleCount;
-  EFI_HANDLE  *Handles = 0;
-
-  PrintToConsole(L"Searching a file system with the file \"log.txt\"...\r\n");
+  EFI_HANDLE  *Handles = NULL;
 
   Status = gBS->LocateHandleBuffer (
                   ByProtocol,
@@ -223,6 +336,13 @@ FindFileSystem (
                   &Handles
                   );
   RETURN_ON_ERR (Status)
+
+  if (!CheckForNewFsHandles(Handles, HandleCount)) {
+    DBG_EXIT_STATUS (EFI_NOT_FOUND)
+    return FALSE;
+  }
+
+  DBG_INFO1 ("New fs found. Searching a file system with the file \"log.txt\"...\n");
 
   for (UINTN Index = 0; Index < HandleCount; Index++) {
     EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *FileSystemProtocol = NULL;
@@ -240,9 +360,9 @@ FindFileSystem (
       continue;
     }
 
-    PrintToConsole(L"Simple FS found...\r\n");
+    DBG_INFO1 ("Simple FS is found...\n");
 
-    // Получаем корень файловой системы...
+    // Получаем корень файловой системы.
     EFI_FILE_PROTOCOL *FileSystemRoot = NULL;
     Status = FileSystemProtocol->OpenVolume(
         FileSystemProtocol,
@@ -264,13 +384,13 @@ FindFileSystem (
                       );
     if (EFI_ERROR (Status)) {
       // Не нашли.
-      PrintToConsole(L"No log.txt file, skipping...\r\n");
+      DBG_INFO1 ("log.txt is not found, skipping...\n");
       FileSystemRoot->Close(FileSystemRoot);
       continue;
     }
 
     // Нашли, удаляем его и создаём новый.
-    PrintToConsole(L"File log.txt found...\r\n");
+    DBG_INFO1 ("log.txt is found...\n");
     Status = File->Delete(File);
 
     Status = FileSystemRoot->Open(
@@ -281,33 +401,89 @@ FindFileSystem (
                       0
                       );
     if (EFI_ERROR (Status)) {
-      PrintToConsole(L"Can\t create log.txt.\r\n");
+      DBG_INFO1 ("Can\t create log.txt.\n");
       FileSystemRoot->Close(FileSystemRoot);
       continue;
     }
 
     // Готово, можно начинать писать в файл.
-    PrintToConsole(L"log.txt opened.\r\n");
+    DBG_INFO1 ("log.txt is opened.\n");
     *LogFileProtocol = File;
-    gBS->FreePool (Handles);
+
+    SHELL_FREE_NON_NULL (Handles);
+    DBG_EXIT_STATUS (EFI_SUCCESS)
     return EFI_SUCCESS;
   }
 
-  PrintToConsole(L"Simple FS not found =(\r\n");
-  gBS->FreePool (Handles);
+  DBG_INFO1 ("Simple FS is not found =(\n");
+
+  SHELL_FREE_NON_NULL (Handles);
+  DBG_EXIT_STATUS (EFI_NOT_FOUND)
   return EFI_NOT_FOUND;
 }
 
-// ----------------------------------------------------------------------------
-VOID
-CloseLogFile (
+// -----------------------------------------------------------------------------
+/**
+ * Проверяет, есть ли среди Handles новые хэндлы.
+ *
+ * @param Handles     Массив хэндлов.
+ * @param HandleCount Количество элементов в Handles.
+ *
+ * @retval TRUE   Обнаружены новые хэндлы.
+ * @retval FALSE  Новых нет.
+*/
+BOOLEAN
+CheckForNewFsHandles(
+  IN EFI_HANDLE  *Handles,
+  IN UINTN       HandleCount
   )
 {
-  if (gLogFileProtocol) {
-    gLogFileProtocol->Flush(gLogFileProtocol);
-    gLogFileProtocol->Close(gLogFileProtocol);
-    gLogFileProtocol = NULL;
+  DBG_ENTER ()
+
+  BOOLEAN NewFsFound = FALSE;
+  for (UINTN Index = 0; Index < HandleCount; ++Index) {
+    BOOLEAN HandleIsAlreadyStored = FALSE;
+
+    FOR_EACH_VCT (EFI_HANDLE, FsHandle, gPreviousFsHandles) {
+      if (*FsHandle == Handles[Index]) {
+        HandleIsAlreadyStored = TRUE;
+      }
+    }
+
+    if (!HandleIsAlreadyStored) {
+      NewFsFound = TRUE;
+      break;
+    }
+  }
+
+  if (!NewFsFound) {
+    DBG_EXIT_STATUS (EFI_NOT_FOUND)
+    return FALSE;
+  }
+
+  Vector_Clear (&gPreviousFsHandles);
+  for (UINTN Index = 0; Index < HandleCount; Index++) {
+    Vector_PushBack (&gPreviousFsHandles, &Handles[Index]);
+  }
+
+  DBG_EXIT ();
+  return TRUE;
+}
+
+// -----------------------------------------------------------------------------
+/**
+ * Корректно закрывает FileProtocol, если это ещё не было сделано.
+*/
+VOID
+FlushAndCloseFileProtocol (
+  IN OUT EFI_FILE_PROTOCOL **FileProtocol
+  )
+{
+  if (FileProtocol && *FileProtocol) {
+    (*FileProtocol)->Flush(*FileProtocol);
+    (*FileProtocol)->Close(*FileProtocol);
+    *FileProtocol = NULL;
   }
 }
 
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
