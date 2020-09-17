@@ -12,3 +12,4 @@
 
 [PcdsFeatureFlag]
   gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole | FALSE | BOOLEAN | 1
+  gDxeLoadingLoggerSpaceGuid.PcdDebugMacrosOutputEnabled   | FALSE | BOOLEAN | 2

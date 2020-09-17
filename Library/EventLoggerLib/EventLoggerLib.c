@@ -1,11 +1,13 @@
 #include <Uefi.h>
-#include <Library/CommonMacros.h>
+#include <Library/CommonMacrosLib.h>
 #include <Library/EventLoggerLib.h>
 #include <Library/EventProviderLib.h>
 #include <Library/ProtocolGuidDatabaseLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiLib.h>
+
+#define DBG_STR_NO_NULL(Pointer) ((Pointer) ? (Pointer) : (L"<NONE>"))
 
 // -----------------------------------------------------------------------------
 /**
@@ -119,8 +121,6 @@ Logger_Stop (
 
   DBG_EXIT ();
 }
-
-#define DBG_STR_NO_NULL(Pointer) ((Pointer) ? (Pointer) : (L"<NONE>"))
 
 // -----------------------------------------------------------------------------
 /**
