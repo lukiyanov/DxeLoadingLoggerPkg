@@ -11,5 +11,11 @@
   gDxeLoadingLoggerSpaceGuid = { 0x83483450, 0xF5ED, 0x477F, { 0x80, 0xF2, 0xBA, 0x3C, 0xC7, 0x5D, 0x84, 0x92 } }
 
 [PcdsFeatureFlag]
+  # Печать номеров событий на экран сразу после их возникновения.
   gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole | FALSE | BOOLEAN | 1
-  gDxeLoadingLoggerSpaceGuid.PcdDebugMacrosOutputEnabled   | FALSE | BOOLEAN | 2
+  # Flush'ить лог-файл после каждого события.
+  # TRUE сильно тормозит загрузку, но помогает не пропустить события в случае
+  # если системная прошивка перезагружается или выключается без нашего участия.
+  gDxeLoadingLoggerSpaceGuid.PcdFlushEveryEventEnabled     | FALSE | BOOLEAN | 2
+  # Отладочный вывод.
+  gDxeLoadingLoggerSpaceGuid.PcdDebugMacrosOutputEnabled   | FALSE | BOOLEAN | 3

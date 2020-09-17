@@ -21,13 +21,18 @@
   BaseMemoryLib
   BaseLib
   UefiLib
+  PcdLib
   DevicePathLib
   # Наши
   EventLoggerLib
   CommonMacrosLib
+  VectorLib
 
 [Depex]
   TRUE
 
 [Protocols]
   gEfiSimpleFileSystemProtocolGuid
+
+[FeaturePcd]
+  gDxeLoadingLoggerSpaceGuid.PcdFlushEveryEventEnabled
