@@ -18,6 +18,7 @@
   BaseLib
   BaseMemoryLib
   UefiLib
+  PrintLib
   DevicePathLib
 
   VectorLib

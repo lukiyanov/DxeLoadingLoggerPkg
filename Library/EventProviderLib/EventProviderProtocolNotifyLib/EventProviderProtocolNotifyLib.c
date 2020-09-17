@@ -3,6 +3,7 @@
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiLib.h>
+#include <Library/PrintLib.h>
 #include <Library/DevicePathLib.h>
 #include <Pi/PiFirmwareFile.h>
 #include <Pi/PiFirmwareVolume.h>
@@ -14,6 +15,11 @@
 #include <Library/VectorLib.h>
 #include <Library/ProtocolGuidDatabaseLib.h>
 #include <Library/CommonMacrosLib.h>
+
+
+// -----------------------------------------------------------------------------
+#define CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE 128
+
 
 // -----------------------------------------------------------------------------
 /// EVENT_PROVIDER -> Data
@@ -40,6 +46,7 @@ typedef struct
   EVENT_PROVIDER *This;
   EFI_GUID       *Guid;
 } NOTIFY_FUNCTION_CONTEXT;
+
 
 // -----------------------------------------------------------------------------
 /**
@@ -109,6 +116,15 @@ GetHandleImageNameAndParentImageName (
 
 // -----------------------------------------------------------------------------
 /**
+ * Возвращает TRUE если это хэндл исполняемого образа.
+*/
+BOOLEAN
+IsHandleImage (
+  IN  EFI_HANDLE Handle
+  );
+
+// -----------------------------------------------------------------------------
+/**
  * По хэндлу образа находит его имя.
  * Указатель, возвращённый через OUT-параметр впоследствии требуется освободить.
 */
@@ -154,6 +170,7 @@ CHAR16 *
 FindLoadedImageFileName (
   IN EFI_LOADED_IMAGE_PROTOCOL *LoadedImage
   );
+
 
 // -----------------------------------------------------------------------------
 /**
@@ -381,14 +398,67 @@ CheckProtocolExistenceOnStartup (
   Status = gBS->LocateProtocol (Protocol, NULL, &Iface);
   DBG_INFO ("-- Protocol %g exists: %u\n", Protocol, (unsigned)(!EFI_ERROR (Status)));
 
-  if (! EFI_ERROR (Status)) {
-    LOADING_EVENT  Event;
-    Event.Type                               = LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP;
-    Event.ProtocolExistsOnStartup.Guid       = *Protocol;
-    Event.ProtocolExistsOnStartup.ImageNames = NULL;
-
-    This->AddEvent(This->ExternalData, &Event);
+  if (EFI_ERROR (Status)) {
+    DBG_EXIT_STATUS (EFI_NOT_FOUND);
+    return;
   }
+
+  CHAR16 *ImageNames = NULL;
+
+  EFI_HANDLE *Handles;
+  UINTN      HandleCount;
+
+  Status = gBS->LocateHandleBuffer (
+                  ByProtocol,
+                  Protocol,
+                  NULL,
+                  &HandleCount,
+                  &Handles
+                  );
+  if (EFI_ERROR (Status)) {
+    ImageNames = StrAllocCopy (L"<ERROR: can\t get handle buffer for protocol>");
+  } else {
+    ImageNames = StrAllocCopy (L"{ ");
+
+    UINTN NotImageHandleCount = 0;
+
+    for (UINTN Index = 0; Index < HandleCount; ++Index) {
+      CHAR16 *CurrentImageName = NULL;
+
+      if (IsHandleImage (Handles[Index])) {
+        GetHandleImageName (
+          Handles[Index],
+          &CurrentImageName
+          );
+
+        StrAllocAppend(&ImageNames, CurrentImageName);
+
+        if (NotImageHandleCount || Index < HandleCount - 1) {
+          StrAllocAppend(&ImageNames, L", ");
+        }
+      } else {
+        NotImageHandleCount++;
+      }
+
+      SHELL_FREE_NON_NULL (CurrentImageName);
+    }
+
+    if (NotImageHandleCount) {
+      static CHAR16 Buffer[CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE];
+      UnicodeSPrint(Buffer, CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE * sizeof(CHAR16), L"[not images: %u]", (unsigned)NotImageHandleCount);
+
+      StrAllocAppend(&ImageNames, Buffer);
+    }
+
+    StrAllocAppend(&ImageNames, L" }");
+  }
+
+  LOADING_EVENT  Event;
+  Event.Type                               = LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP;
+  Event.ProtocolExistsOnStartup.Guid       = *Protocol;
+  Event.ProtocolExistsOnStartup.ImageNames = ImageNames;
+
+  This->AddEvent(This->ExternalData, &Event);
 
   DBG_EXIT ();
 }
@@ -656,6 +726,31 @@ GetHandleImageNameAndParentImageName (
 
   GetHandleImageName(LoadedImage->ParentHandle, ParentImageName);
   DBG_EXIT ();
+}
+
+// -----------------------------------------------------------------------------
+/**
+ * Возвращает TRUE если это хэндл исполняемого образа.
+*/
+BOOLEAN
+IsHandleImage (
+  IN  EFI_HANDLE Handle
+  )
+{
+  DBG_ENTER ();
+
+  EFI_STATUS Status;
+  Status = gBS->OpenProtocol (
+                  Handle,
+                  &gEfiLoadedImageProtocolGuid,
+                  NULL,
+                  gImageHandle,
+                  NULL,
+                  EFI_OPEN_PROTOCOL_TEST_PROTOCOL
+                  );
+
+  DBG_EXIT ();
+  return !EFI_ERROR (Status);
 }
 
 // ----------------------------------------------------------------------------
