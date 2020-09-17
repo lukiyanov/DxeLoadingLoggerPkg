@@ -5,6 +5,7 @@
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
   ENTRY_POINT                    = Initialize
+  UNLOAD_IMAGE                   = Unload
 
 [Sources]
   DxeLoadingLogger.c
@@ -23,6 +24,7 @@
   DevicePathLib
   # Наши
   EventLoggerLib
+  CommonMacrosLib
 
 [Depex]
   TRUE

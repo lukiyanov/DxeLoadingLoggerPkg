@@ -2,16 +2,15 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/BaseLib.h>
 #include <Library/EventLoggerLib.h>
+#include <Library/CommonMacrosLib.h>
+
 #include <Protocol/SimpleFileSystem.h>
 
-// #include "guid_db.h"
-//#include "DxeLoadingLog.h"
 
 // ----------------------------------------------------------------------------
-#define RETURN_ON_ERR(Status) if (EFI_ERROR (Status)) { return Status; }
-#define UNICODE_BUFFER_SIZE LOG_ENTRY_IMAGE_NAME_LENGTH
+static LOGGER             gLogger;
+static EFI_FILE_PROTOCOL  *gLogFileProtocol;
 
-static LOGGER gLogger;
 
 // ----------------------------------------------------------------------------
 EFI_STATUS
@@ -53,94 +52,28 @@ CloseLogFile (
 
 
 // ----------------------------------------------------------------------------
-// static ProtocolEntry Protocols[] = {
-//   GUID_DB
-// };
-
-//static DxeLoadingLog      gLoadingLogInstance;
-static EFI_FILE_PROTOCOL  *gLogFileProtocol;
-
-#define RELEASE_BUILD
-// ----------------------------------------------------------------------------
 EFI_STATUS
 EFIAPI
 Initialize (
   IN  EFI_HANDLE         ImageHandle,
   IN  EFI_SYSTEM_TABLE   *SystemTable
-)
+  )
 {
   Logger_Construct (&gLogger);
   Logger_Start     (&gLogger);
-
-  // Извне gLogger вызывать:
-  //   GetLogEventCount()
-  //   GetLogEvent(Index)
-
-  // Никаких коллбэков! Данный файл ждёт когда записть в файл будет доступна и ведёт её,
-  // запоминая индекс последнего успешно залогированного события.
-
-
-//  UINTN ProtocolCount = sizeof(Protocols) / sizeof(Protocols[0]);
-
-// #ifdef RELEASE_BUILD
-
-//   Status = ExecuteFunctionOnProtocolAppearance (
-//     &my_gEfiEventReadyToBootGuid,
-//     &ShowLogAndCleanup
-//     );
-//   RETURN_ON_ERR(Status)
-
-//   Status = ExecuteFunctionOnProtocolAppearance (
-//     &my_gLenovoSystemHiiDatabaseDxeGuid,  // Устанавливается перед входом в Settings.
-//     &ShowLogAndCleanup
-//     );
-//   RETURN_ON_ERR(Status)
-
-// #else
-//   // Запуск вручную с флешки на время тестирования.
-//   Status = ExecuteFunctionOnProtocolAppearance(
-//     &gEfiBootManagerPolicyProtocolGuid,
-//     &ShowLogAndCleanup
-//     );
-//   RETURN_ON_ERR(Status)
-
-// #endif
-
-//  DxeLoadingLog_Construct (&gLoadingLogInstance);
-
-//  Status = DxeLoadingLog_Start (&gLoadingLogInstance);
-//  Status = DxeLoadingLog_SetObservingProtocols (&gLoadingLogInstance, Protocols, ProtocolCount);
-  // RETURN_ON_ERR(Status)
 
   return EFI_SUCCESS;
 }
 
 // ----------------------------------------------------------------------------
 EFI_STATUS
-ExecuteFunctionOnProtocolAppearance (
-  IN  EFI_GUID         *ProtocolGuid,
-  IN  EFI_EVENT_NOTIFY CallbackFunction
+EFIAPI
+Unload (
+  IN EFI_HANDLE ImageHandle
   )
 {
-  EFI_STATUS   Status;
-  EFI_EVENT    CallbackEvent;
-  VOID         *Registration;
-
-  Status = gBS->CreateEvent(
-    EVT_NOTIFY_SIGNAL,
-    TPL_CALLBACK,
-    CallbackFunction,
-    ProtocolGuid,
-    &CallbackEvent
-    );
-  RETURN_ON_ERR(Status)
-
-  Status = gBS->RegisterProtocolNotify(
-    ProtocolGuid,
-    CallbackEvent,
-    &Registration
-    );
-  RETURN_ON_ERR(Status)
+  // CloseLogFile ();
+  Logger_Destruct (&gLogger);
 
   return EFI_SUCCESS;
 }
@@ -173,7 +106,7 @@ ShowLogAndCleanup (
 // {
 //   PrintToLog(L"-- Begin --\r\n");
 
-  // static CHAR16 UnicodeBuffer[UNICODE_BUFFER_SIZE];
+  // static CHAR16 UnicodeBuffer[LOG_ENTRY_IMAGE_NAME_LENGTH];
   // BOOLEAN LoadedImagesAfterUs = FALSE;
   // UINTN SpacesCount;
 
@@ -194,7 +127,7 @@ ShowLogAndCleanup (
   //     AsciiStrToUnicodeStrS (
   //       entry->ImageLoaded.ImageName,
   //       UnicodeBuffer,
-  //       UNICODE_BUFFER_SIZE
+  //       LOG_ENTRY_IMAGE_NAME_LENGTH
   //       );
   //     PrintToLog(UnicodeBuffer);
 
@@ -208,7 +141,7 @@ ShowLogAndCleanup (
   //     AsciiStrToUnicodeStrS (
   //       entry->ImageLoaded.ParentImageName,
   //       UnicodeBuffer,
-  //       UNICODE_BUFFER_SIZE
+  //       LOG_ENTRY_IMAGE_NAME_LENGTH
   //       );
   //     PrintToLog(UnicodeBuffer);
   //     PrintToLog(L"\r\n");
