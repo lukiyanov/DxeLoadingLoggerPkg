@@ -301,36 +301,3 @@ Logger_GetEvent(
 }
 
 // -----------------------------------------------------------------------------
-/**
- * Удаляет все события, хранимые в логе, но только в случае если их количество равно EventCount.
- * При этом сбор событий не прекращается.
- * При длительном использовании потребитель должен время от времени вызывать
- * данную функцию чтобы ограничить потребление памяти.
- */
-BOOLEAN
-Logger_ClearEvents(
-  IN OUT LOGGER *This,
-  IN     UINTN  ExpectedEventCount
-  )
-{
-  DBG_ENTER ();
-  EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
-
-  BOOLEAN Success;
-
-  UINTN EventCount = Vector_Size (&This->LogData);
-  if (EventCount == ExpectedEventCount) {
-    // Потребитель знает об актуальном количестве событий,
-    // т.е. он обработал их все и с тех пор как он обработал последнее событие новых не поступило.
-    Vector_Clear (&This->LogData);
-    Success = TRUE;
-  } else {
-    Success = FALSE;
-  }
-
-  gBS->RestoreTPL (OldTpl);
-  DBG_EXIT_STATUS (Success ? EFI_SUCCESS : EFI_ACCESS_DENIED);
-  return Success;
-}
-
-// -----------------------------------------------------------------------------
