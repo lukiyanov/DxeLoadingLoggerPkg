@@ -163,7 +163,7 @@ AddEventToLog (
   switch (Event->Type)
   {
   case LOG_ENTRY_TYPE_PROTOCOL_INSTALLED:
-    GuidName = GetProtocolName(&Event->ProtocolInstalled.Guid);
+    GuidName = GetProtocolName (&Event->ProtocolInstalled.Guid);
     DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_INSTALLED\n");
     if (GuidName == NULL) {
       DBG_INFO  ("Guid:             %g\n", &Event->ProtocolInstalled.Guid);

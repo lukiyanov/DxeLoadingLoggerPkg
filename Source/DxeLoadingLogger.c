@@ -2,12 +2,18 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/BaseLib.h>
 #include <Library/UefiLib.h>
+#include <Library/PrintLib.h>
 #include <Library/PcdLib.h>
 #include <Library/EventLoggerLib.h>
 #include <Library/CommonMacrosLib.h>
 #include <Library/VectorLib.h>
+#include <Library/ProtocolGuidDatabaseLib.h>
 
 #include <Protocol/SimpleFileSystem.h>
+
+
+// -----------------------------------------------------------------------------
+#define PRINT_TO_FILE_BUFFER_LENGTH 4096
 
 
 // -----------------------------------------------------------------------------
@@ -16,6 +22,7 @@ static EFI_FILE_PROTOCOL  *gLogFileProtocol;
 static VECTOR             gPreviousFsHandles;
 
 static GLOBAL_REMOVE_IF_UNREFERENCED EFI_EVENT  gEventUpdateLog;
+
 
 // -----------------------------------------------------------------------------
 /**
@@ -41,15 +48,13 @@ ProcessNewEvent (
 
 // -----------------------------------------------------------------------------
 /**
- * Дописывает конкретное событие в лог.
- *
- * @retval TRUE   Информация о событии успешно дописана в лог.
- * @retval FALSE  Ошибка записи, информация о событии не записана.
+ * Дописывает информацию о событии Event в gLogFileProtocol.
+ * В случае неудачи устанавливает gLogFileProtocol в NULL.
 */
-BOOLEAN
+VOID
 AddNewEventToLog (
-  IN LOADING_EVENT      *Event,
-  IN EFI_FILE_PROTOCOL  *gLogFileProtocol
+  IN     LOADING_EVENT      *Event,
+  IN OUT EFI_FILE_PROTOCOL  **gLogFileProtocol
   );
 
 // -----------------------------------------------------------------------------
@@ -85,6 +90,19 @@ CheckForNewFsHandles(
 
 // -----------------------------------------------------------------------------
 /**
+ * Печатает в файл.
+ * Если не удалось, то устанавливает FileProtocol в NULL.
+*/
+VOID
+EFIAPI
+PrintToFile (
+  IN OUT EFI_FILE_PROTOCOL **FileProtocol,
+  IN     CHAR16            *Format,
+  ...
+  );
+
+// -----------------------------------------------------------------------------
+/**
  * Корректно закрывает FileProtocol, если это ещё не было сделано.
 */
 VOID
@@ -105,6 +123,8 @@ Initialize (
   )
 {
   DBG_ENTER ();
+
+  Vector_Construct (&gPreviousFsHandles, sizeof(EFI_HANDLE), 32);
 
   if (FeaturePcdGet (PcdFlushEveryEventEnabled)) {
     Logger_Construct (&gLogger, &ProcessNewEvent);
@@ -130,7 +150,6 @@ Initialize (
     RETURN_ON_ERR (Status);
   }
 
-  Vector_Construct (&gPreviousFsHandles, sizeof(EFI_HANDLE), 32);
   Logger_Start     (&gLogger);
 
   DBG_EXIT_STATUS (EFI_SUCCESS);
@@ -206,103 +225,140 @@ ProcessNewEvent (
     }
   }
 
-  DBG_INFO1 ("TODO: write the event to the log\n");
+  AddNewEventToLog(Event, &gLogFileProtocol);
+
+  if (gLogFileProtocol) {
+    gLogFileProtocol->Flush(gLogFileProtocol);
+  }
+
+  // else {
+  // TODO: сохранить событие и вывести в лог позже.
+  // }
+
+  // TODO: выводить в лог все предыдущие события
+
   DBG_EXIT ();
 }
 
 // -----------------------------------------------------------------------------
-// VOID
-// ShowAndWriteLog (
-//   IN  DxeLoadingLog *Log
-//   )
-// {
-//   PrintToLog(L"-- Begin --\r\n");
-
-  // static CHAR16 UnicodeBuffer[LOG_ENTRY_IMAGE_NAME_LENGTH];
-  // BOOLEAN LoadedImagesAfterUs = FALSE;
-  // UINTN SpacesCount;
-
-  // FOR_EACH_VCT(LOADING_EVENT, entry, Log->LogData) {
-  //   switch (entry->Type) {
-  //   case LOG_ENTRY_TYPE_PROTOCOL_INSTALLED:
-  //     PrintToLog(L"- PROTOCOL-INSTALLED: ");
-  //     PrintToLog(entry->ProtocolInstalled.ProtocolName);
-  //     PrintToLog(L"\r\n");
-  //     break;
-
-  //   case LOG_ENTRY_TYPE_IMAGE_LOADED:
-  //     if (LoadedImagesAfterUs) {
-  //       PrintToLog(L"\r\n");
-  //     }
-
-  //     PrintToLog(L"- IMAGE-LOADED: ");
-  //     AsciiStrToUnicodeStrS (
-  //       entry->ImageLoaded.ImageName,
-  //       UnicodeBuffer,
-  //       LOG_ENTRY_IMAGE_NAME_LENGTH
-  //       );
-  //     PrintToLog(UnicodeBuffer);
-
-  //     // Выравниваем пробелами чтобы лучше читалось:
-  //     SpacesCount = LOG_ENTRY_IMAGE_NAME_LENGTH - 1 - StrLen(UnicodeBuffer);
-  //     for (UINTN i = 0; i < SpacesCount; i++) {
-  //       PrintToLog(L" ");
-  //     }
-
-  //     PrintToLog(L" loaded by: ");
-  //     AsciiStrToUnicodeStrS (
-  //       entry->ImageLoaded.ParentImageName,
-  //       UnicodeBuffer,
-  //       LOG_ENTRY_IMAGE_NAME_LENGTH
-  //       );
-  //     PrintToLog(UnicodeBuffer);
-  //     PrintToLog(L"\r\n");
-
-  //     if (LoadedImagesAfterUs) {
-  //       PrintToLog(L"\r\n");
-  //     }
-  //     break;
-
-  //   case LOG_ENTRY_TYPE_PROTOCOL_EXISTANCE_ON_STARTUP:
-  //     PrintToLog(L"- EXSISTENCE-ON-STARTUP: ");
-  //     PrintToLog(entry->ProtocolExistence.ProtocolName);
-  //     PrintToLog(L"\r\n");
-  //     LoadedImagesAfterUs = TRUE;
-  //     break;
-
-  //   default:
-  //     PrintToLog(L"- UNKNOWN: Log entry with the unknown type.\r\n");
-  //   }
-  // }
-
-//   PrintToLog(L"-- End --\r\n");
-// }
+#define DBG_STR_NO_NULL(Pointer) ((Pointer) ? (Pointer) : (L"<NONE>"))
 
 // -----------------------------------------------------------------------------
-// VOID
-// PrintToLog (
-//   IN  CHAR16  *Str
-//   )
-// {
-//   if (gLogFileProtocol == NULL) {
-//     FindFileSystem (&gLogFileProtocol);
-//   }
+/**
+ * Дописывает информацию о событии Event в gLogFileProtocol.
+ * В случае неудачи устанавливает gLogFileProtocol в NULL.
+*/
+VOID
+AddNewEventToLog (
+  IN     LOADING_EVENT      *Event,
+  IN OUT EFI_FILE_PROTOCOL  **gLogFileProtocol
+  )
+{
+  STATIC CHAR16 *StrUnknown = L"<UNKNOWN>";
 
-//   if (gLogFileProtocol) {
-//     UINTN Length = StrLen(Str) * sizeof(CHAR16);
+  switch (Event->Type)
+  {
+  case LOG_ENTRY_TYPE_PROTOCOL_INSTALLED:
+    // GuidName = GetProtocolName (&Event->ProtocolInstalled.Guid);
 
-//     gLogFileProtocol->Write(
-//       gLogFileProtocol,
-//       &Length,
-//       Str
-//       );
+    PrintToFile (gLogFileProtocol, L"Type:             LOG_ENTRY_TYPE_PROTOCOL_INSTALLED\r\n");
+    // if (GuidName == NULL) {
+    //   PrintToFile  (gLogFileProtocol, L"Guid:             %g\r\n", &Event->ProtocolInstalled.Guid);
+    // } else {
+    //   PrintToFile  (gLogFileProtocol, L"Guid:             %s\r\n", GuidName);
+    // }
+    // PrintToFile  (gLogFileProtocol, L"ImageName(s):     %s\r\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.ImageName));
+    if (Event->ProtocolInstalled.Successful) {
+      PrintToFile (gLogFileProtocol, L"Successful:       TRUE\r\n");
+    } else {
+      PrintToFile (gLogFileProtocol, L"Successful:       FALSE\r\n");
+    }
+    break;
 
-//     // Это очень замедляет запись лога, но защищает от внезапных перезагрузок.
-//     // gLogFileProtocol->Flush(
-//     //   gLogFileProtocol
-//     //   );
-//   }
-// }
+  case LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP:
+    {
+      CHAR16 *GuidName    = GetProtocolName(&Event->ProtocolExistsOnStartup.Guid);
+
+      if (Event->ProtocolExistsOnStartup.ImageNames != NULL) {
+        if (GuidName != NULL) {
+          PrintToFile (
+            gLogFileProtocol,
+            L"- PROTOCOL-EXISTS-ON-STARTUP: %-60s at: %s\r\n",
+            GuidName,
+            Event->ProtocolExistsOnStartup.ImageNames
+            );
+        } else {
+          PrintToFile (
+            gLogFileProtocol,
+            L"- PROTOCOL-EXISTS-ON-STARTUP: %-60g at: %s\r\n",
+            &Event->ProtocolExistsOnStartup.Guid,
+            Event->ProtocolExistsOnStartup.ImageNames
+            );
+        }
+      } else {
+        if (GuidName != NULL) {
+          PrintToFile (gLogFileProtocol, L"- PROTOCOL-EXISTS-ON-STARTUP: %s\r\n", GuidName);
+        } else {
+          PrintToFile (gLogFileProtocol, L"- PROTOCOL-EXISTS-ON-STARTUP: %g\r\n", &Event->ProtocolExistsOnStartup.Guid);
+        }
+      }
+    }
+
+    //PrintToFile  (gLogFileProtocol, L"ImageName(s):     %s\r\n", DBG_STR_NO_NULL ());
+    break;
+
+  case LOG_ENTRY_TYPE_PROTOCOL_REMOVED:
+    // GuidName = GetProtocolName(&Event->ProtocolRemoved.Guid);
+
+    PrintToFile (gLogFileProtocol, L"Type:             LOG_ENTRY_TYPE_PROTOCOL_REMOVED\r\n");
+    // if (GuidName == NULL) {
+    //   PrintToFile  (gLogFileProtocol, L"Guid:             %g\r\n", &Event->ProtocolRemoved.Guid);
+    // } else {
+    //   PrintToFile  (gLogFileProtocol, L"Guid:             %s\r\n", GuidName);
+    // }
+    // PrintToFile  (gLogFileProtocol, L"ImageName(s):     %s\r\n", DBG_STR_NO_NULL (Event->ProtocolRemoved.ImageName));
+    // if (Event->ProtocolRemoved.Successful) {
+    //   PrintToFile (gLogFileProtocol, L"Successful:       TRUE\r\n");
+    // } else {
+    //   PrintToFile (gLogFileProtocol, L"Successful:       FALSE\r\n");
+    // }
+    break;
+
+  case LOG_ENTRY_TYPE_IMAGE_LOADED:
+    PrintToFile (gLogFileProtocol, L"Type:             LOG_ENTRY_TYPE_IMAGE_LOADED\r\n");
+    // PrintToFile  (gLogFileProtocol, L"ImageName:        %s\r\n", DBG_STR_NO_NULL (Event->ImageLoaded.ImageName));
+    // PrintToFile  (gLogFileProtocol, L"ParentImageName:  %s\r\n", DBG_STR_NO_NULL (Event->ImageLoaded.ParentImageName));
+    break;
+
+  case LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP:
+    {
+      CHAR16 *ImageName  = Event->ImageExistsOnStartup.ImageName       ? Event->ImageExistsOnStartup.ImageName       : StrUnknown;
+      CHAR16 *ParentName = Event->ImageExistsOnStartup.ParentImageName ? Event->ImageExistsOnStartup.ParentImageName : StrUnknown;
+
+      PrintToFile (gLogFileProtocol, L"- IMAGE-EXISTS-ON-STARTUP: %-60s loaded by: %s\r\n", ImageName, ParentName);
+    }
+    break;
+
+  case LOG_ENTRY_TYPE_BDS_STAGE_ENTERED:
+    PrintToFile (gLogFileProtocol, L"Type:             LOG_ENTRY_TYPE_BDS_STAGE_ENTERED\r\n");
+    switch (Event->BdsStageEntered.SubEvent) {
+    case BDS_STAGE_EVENT_BEFORE_ENTRY_CALLING:
+      PrintToFile (gLogFileProtocol, L"SubType:          BEFORE\r\n");
+      break;
+    case BDS_STAGE_EVENT_AFTER_ENTRY_CALLING:
+      PrintToFile (gLogFileProtocol, L"SubType:          AFTER\r\n");
+      break;
+    default:
+      PrintToFile (gLogFileProtocol, L"ERROR: Unknown SubEvent type\r\n");
+      break;
+    }
+    break;
+
+  default:
+    PrintToFile (gLogFileProtocol, L"ERROR: Unknown event type\r\n");
+    break;
+  }
+}
 
 // -----------------------------------------------------------------------------
 /**
@@ -468,6 +524,51 @@ CheckForNewFsHandles(
 
   DBG_EXIT ();
   return TRUE;
+}
+
+// -----------------------------------------------------------------------------
+/**
+ * Печатает в файл.
+ * Если не удалось, то устанавливает FileProtocol в NULL.
+*/
+VOID
+EFIAPI
+PrintToFile (
+  IN OUT EFI_FILE_PROTOCOL **FileProtocol,
+  IN     CHAR16            *Format,
+  ...
+  )
+{
+  DBG_ENTER ();
+
+  static CHAR16 Buffer[PRINT_TO_FILE_BUFFER_LENGTH];
+
+  if (FileProtocol == NULL || *FileProtocol == NULL) {
+    DBG_EXIT_STATUS (EFI_ABORTED);
+    return;
+  }
+
+  VA_LIST Marker;
+  VA_START (Marker, Format);
+  UINTN Length = UnicodeVSPrint (Buffer, PRINT_TO_FILE_BUFFER_LENGTH * sizeof(CHAR16), Format, Marker) * sizeof(CHAR16);
+  VA_END (Marker);
+
+  DBG_INFO ("String is: %s", Buffer);
+
+  EFI_STATUS Status;
+  Status = (*FileProtocol)->Write(
+                            (*FileProtocol),
+                            &Length,
+                            Buffer
+                            );
+  if (EFI_ERROR (Status)) {
+    *FileProtocol = NULL;
+
+    DBG_EXIT_STATUS (EFI_ACCESS_DENIED);
+    return;
+  }
+
+  DBG_EXIT ();
 }
 
 // -----------------------------------------------------------------------------
