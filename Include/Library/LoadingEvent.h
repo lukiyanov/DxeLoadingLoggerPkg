@@ -20,7 +20,8 @@ typedef enum {
 typedef PACKED struct {
   GUID    Guid;
   BOOLEAN Successful;
-  CHAR16  *ImageName;
+  CHAR16  *ImageNameWhoInstalled;
+  CHAR16  *ImageNameWhereInstalled;
 } LOG_ENTRY_PROTOCOL_INSTALLED, LOG_ENTRY_PROTOCOL_REMOVED;
 
 // -----------------------------------------------------------------------------

@@ -170,7 +170,8 @@ AddEventToLog (
     } else {
       DBG_INFO  ("Guid:             %s\n", GuidName);
     }
-    DBG_INFO  ("ImageName(s):     %s\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.ImageName));
+    DBG_INFO  ("ImageNameWho(s):     %s\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.ImageNameWhoInstalled));
+    DBG_INFO  ("ImageNameWhere(s):   %s\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.ImageNameWhereInstalled));
     if (Event->ProtocolInstalled.Successful) {
       DBG_INFO1 ("Successful:       TRUE\n");
     } else {
@@ -197,7 +198,8 @@ AddEventToLog (
     } else {
       DBG_INFO  ("Guid:             %s\n", GuidName);
     }
-    DBG_INFO  ("ImageName(s):     %s\n", DBG_STR_NO_NULL (Event->ProtocolRemoved.ImageName));
+    DBG_INFO  ("ImageNameWho(s):     %s\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.ImageNameWhoInstalled));
+    DBG_INFO  ("ImageNameWhere(s):   %s\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.ImageNameWhereInstalled));
     if (Event->ProtocolRemoved.Successful) {
       DBG_INFO1 ("Successful:       TRUE\n");
     } else {

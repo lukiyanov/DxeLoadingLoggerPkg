@@ -584,10 +584,11 @@ ProtocolInstalledCallback (
 
     SHELL_FREE_NON_NULL (NewHandles);
   } else {
-    Event.Type = LOG_ENTRY_TYPE_PROTOCOL_INSTALLED;
-    Event.ProtocolInstalled.Guid       = *Guid;
-    Event.ProtocolInstalled.ImageName  = NULL; // Данная реализация EventProvider не детектит это.
-    Event.ProtocolInstalled.Successful = TRUE; // Если нас вызвали, то протокол успешно установлен.
+    Event.Type                                      = LOG_ENTRY_TYPE_PROTOCOL_INSTALLED;
+    Event.ProtocolInstalled.Guid                    = *Guid;
+    Event.ProtocolInstalled.ImageNameWhoInstalled   = NULL; // Данная реализация EventProvider не детектит это.
+    Event.ProtocolInstalled.ImageNameWhereInstalled = NULL; // Данная реализация EventProvider не детектит это.
+    Event.ProtocolInstalled.Successful              = TRUE; // Если нас вызвали, то протокол успешно установлен.
   }
 
   This->AddEvent(This->ExternalData, &Event);

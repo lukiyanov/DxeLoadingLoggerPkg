@@ -237,11 +237,10 @@ ProcessNewEvent (
 
   // TODO: выводить в лог все предыдущие события
 
+  // TODO: выводить порядковые номера событий
+
   DBG_EXIT ();
 }
-
-// -----------------------------------------------------------------------------
-#define DBG_STR_NO_NULL(Pointer) ((Pointer) ? (Pointer) : (L"<NONE>"))
 
 // -----------------------------------------------------------------------------
 /**
@@ -259,25 +258,30 @@ AddNewEventToLog (
   switch (Event->Type)
   {
   case LOG_ENTRY_TYPE_PROTOCOL_INSTALLED:
-    // GuidName = GetProtocolName (&Event->ProtocolInstalled.Guid);
+    {
+      // TODO: ImageNameWhoInstalled и ImageNameWhereInstalled
+      // CHAR16 *ImageName = Event->ProtocolInstalled.ImageName ? Event->ProtocolInstalled.ImageName : StrUnknown;
 
-    PrintToFile (gLogFileProtocol, L"Type:             LOG_ENTRY_TYPE_PROTOCOL_INSTALLED\r\n");
-    // if (GuidName == NULL) {
-    //   PrintToFile  (gLogFileProtocol, L"Guid:             %g\r\n", &Event->ProtocolInstalled.Guid);
-    // } else {
-    //   PrintToFile  (gLogFileProtocol, L"Guid:             %s\r\n", GuidName);
-    // }
-    // PrintToFile  (gLogFileProtocol, L"ImageName(s):     %s\r\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.ImageName));
-    if (Event->ProtocolInstalled.Successful) {
-      PrintToFile (gLogFileProtocol, L"Successful:       TRUE\r\n");
-    } else {
-      PrintToFile (gLogFileProtocol, L"Successful:       FALSE\r\n");
+      CHAR16 *GuidName  = GetProtocolName (&Event->ProtocolInstalled.Guid);
+      CHAR16 *Success   = NULL;
+
+      if (Event->ProtocolInstalled.Successful) {
+        Success = L"SUCCESS";
+      } else {
+        Success = L"FAIL";
+      }
+
+      if (GuidName != NULL) {
+        PrintToFile (gLogFileProtocol, L"- PROTOCOL-INSTALLED (%s): %s\r\n", Success, GuidName);
+      } else {
+        PrintToFile (gLogFileProtocol, L"- PROTOCOL-INSTALLED (%s): %g\r\n", Success, &Event->ProtocolInstalled.Guid);
+      }
     }
     break;
 
   case LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP:
     {
-      CHAR16 *GuidName    = GetProtocolName(&Event->ProtocolExistsOnStartup.Guid);
+      CHAR16 *GuidName = GetProtocolName(&Event->ProtocolExistsOnStartup.Guid);
 
       if (Event->ProtocolExistsOnStartup.ImageNames != NULL) {
         if (GuidName != NULL) {
@@ -303,31 +307,37 @@ AddNewEventToLog (
         }
       }
     }
-
-    //PrintToFile  (gLogFileProtocol, L"ImageName(s):     %s\r\n", DBG_STR_NO_NULL ());
     break;
 
   case LOG_ENTRY_TYPE_PROTOCOL_REMOVED:
-    // GuidName = GetProtocolName(&Event->ProtocolRemoved.Guid);
+    {
+      // TODO: ImageNameWhoInstalled и ImageNameWhereInstalled
+      // CHAR16 *ImageName = Event->ProtocolRemoved.ImageName ? Event->ProtocolRemoved.ImageName : StrUnknown;
 
-    PrintToFile (gLogFileProtocol, L"Type:             LOG_ENTRY_TYPE_PROTOCOL_REMOVED\r\n");
-    // if (GuidName == NULL) {
-    //   PrintToFile  (gLogFileProtocol, L"Guid:             %g\r\n", &Event->ProtocolRemoved.Guid);
-    // } else {
-    //   PrintToFile  (gLogFileProtocol, L"Guid:             %s\r\n", GuidName);
-    // }
-    // PrintToFile  (gLogFileProtocol, L"ImageName(s):     %s\r\n", DBG_STR_NO_NULL (Event->ProtocolRemoved.ImageName));
-    // if (Event->ProtocolRemoved.Successful) {
-    //   PrintToFile (gLogFileProtocol, L"Successful:       TRUE\r\n");
-    // } else {
-    //   PrintToFile (gLogFileProtocol, L"Successful:       FALSE\r\n");
-    // }
+      CHAR16 *GuidName  = GetProtocolName (&Event->ProtocolRemoved.Guid);
+      CHAR16 *Success   = NULL;
+
+      if (Event->ProtocolRemoved.Successful) {
+        Success = L"SUCCESS";
+      } else {
+        Success = L"FAIL";
+      }
+
+      if (GuidName != NULL) {
+        PrintToFile (gLogFileProtocol, L"- PROTOCOL-REMOVED (%s): %s\r\n", Success, GuidName);
+      } else {
+        PrintToFile (gLogFileProtocol, L"- PROTOCOL-REMOVED (%s): %g\r\n", Success, &Event->ProtocolRemoved.Guid);
+      }
+    }
     break;
 
   case LOG_ENTRY_TYPE_IMAGE_LOADED:
-    PrintToFile (gLogFileProtocol, L"Type:             LOG_ENTRY_TYPE_IMAGE_LOADED\r\n");
-    // PrintToFile  (gLogFileProtocol, L"ImageName:        %s\r\n", DBG_STR_NO_NULL (Event->ImageLoaded.ImageName));
-    // PrintToFile  (gLogFileProtocol, L"ParentImageName:  %s\r\n", DBG_STR_NO_NULL (Event->ImageLoaded.ParentImageName));
+    {
+      CHAR16 *ImageName  = Event->ImageLoaded.ImageName       ? Event->ImageLoaded.ImageName       : StrUnknown;
+      CHAR16 *ParentName = Event->ImageLoaded.ParentImageName ? Event->ImageLoaded.ParentImageName : StrUnknown;
+
+      PrintToFile (gLogFileProtocol, L"\r\n- IMAGE-LOADED: %-60s loaded by: %s\r\n", ImageName, ParentName);
+    }
     break;
 
   case LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP:
@@ -340,22 +350,30 @@ AddNewEventToLog (
     break;
 
   case LOG_ENTRY_TYPE_BDS_STAGE_ENTERED:
-    PrintToFile (gLogFileProtocol, L"Type:             LOG_ENTRY_TYPE_BDS_STAGE_ENTERED\r\n");
-    switch (Event->BdsStageEntered.SubEvent) {
-    case BDS_STAGE_EVENT_BEFORE_ENTRY_CALLING:
-      PrintToFile (gLogFileProtocol, L"SubType:          BEFORE\r\n");
-      break;
-    case BDS_STAGE_EVENT_AFTER_ENTRY_CALLING:
-      PrintToFile (gLogFileProtocol, L"SubType:          AFTER\r\n");
-      break;
-    default:
-      PrintToFile (gLogFileProtocol, L"ERROR: Unknown SubEvent type\r\n");
-      break;
+    {
+      CHAR16 *SubType = NULL;
+
+      switch (Event->BdsStageEntered.SubEvent) {
+      case BDS_STAGE_EVENT_BEFORE_ENTRY_CALLING:
+        SubType = L"BEFORE";
+        break;
+      case BDS_STAGE_EVENT_AFTER_ENTRY_CALLING:
+        SubType = L"AFTER";
+        break;
+      default:
+        SubType = L"<ERROR: Unknown SubEvent type>";
+        break;
+      }
+
+      static CHAR16 Line[] = L"- --------------------------------------------------------------------------------\r\n";
+      PrintToFile (gLogFileProtocol, Line);
+      PrintToFile (gLogFileProtocol, L"- BDS-STAGE-ENTERED: %s\r\n", SubType);
+      PrintToFile (gLogFileProtocol, Line);
     }
     break;
 
   default:
-    PrintToFile (gLogFileProtocol, L"ERROR: Unknown event type\r\n");
+    PrintToFile (gLogFileProtocol, L"\r\n\r\n- ERROR: Unknown event type\r\n\r\n\r\n");
     break;
   }
 }
