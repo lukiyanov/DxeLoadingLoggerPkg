@@ -20,9 +20,9 @@
 static LOGGER             gLogger;
 static EFI_FILE_PROTOCOL  *gLogFileProtocol;
 static VECTOR             gPreviousFsHandles;
+static UINTN              gLastSuccessfullyLoggedEventNumber;
 
 static GLOBAL_REMOVE_IF_UNREFERENCED EFI_EVENT  gEventUpdateLog;
-
 
 // -----------------------------------------------------------------------------
 /**
@@ -54,6 +54,7 @@ ProcessNewEvent (
 VOID
 AddNewEventToLog (
   IN     LOADING_EVENT      *Event,
+  IN     UINTN              EventNumber,
   IN OUT EFI_FILE_PROTOCOL  **gLogFileProtocol
   );
 
@@ -225,7 +226,7 @@ ProcessNewEvent (
     }
   }
 
-  AddNewEventToLog(Event, &gLogFileProtocol);
+  AddNewEventToLog(Event, ++gLastSuccessfullyLoggedEventNumber, &gLogFileProtocol);
 
   if (gLogFileProtocol) {
     gLogFileProtocol->Flush(gLogFileProtocol);
@@ -250,10 +251,12 @@ ProcessNewEvent (
 VOID
 AddNewEventToLog (
   IN     LOADING_EVENT      *Event,
+  IN     UINTN              EventNumber,
   IN OUT EFI_FILE_PROTOCOL  **gLogFileProtocol
   )
 {
   STATIC CHAR16 *StrUnknown = L"<UNKNOWN>";
+  unsigned Number = EventNumber;
 
   switch (Event->Type)
   {
@@ -272,9 +275,13 @@ AddNewEventToLog (
       }
 
       if (GuidName != NULL) {
-        PrintToFile (gLogFileProtocol, L"- PROTOCOL-INSTALLED (%s): %s\r\n", Success, GuidName);
+        PrintToFile (gLogFileProtocol, L"-%5u- PROTOCOL-INSTALLED (%s): %s\r\n", Number, Success,
+          GuidName
+          );
       } else {
-        PrintToFile (gLogFileProtocol, L"- PROTOCOL-INSTALLED (%s): %g\r\n", Success, &Event->ProtocolInstalled.Guid);
+        PrintToFile (gLogFileProtocol, L"-%5u- PROTOCOL-INSTALLED (%s): %g\r\n", Number, Success,
+          &Event->ProtocolInstalled.Guid
+          );
       }
     }
     break;
@@ -285,25 +292,25 @@ AddNewEventToLog (
 
       if (Event->ProtocolExistsOnStartup.ImageNames != NULL) {
         if (GuidName != NULL) {
-          PrintToFile (
-            gLogFileProtocol,
-            L"- PROTOCOL-EXISTS-ON-STARTUP: %-60s at: %s\r\n",
+          PrintToFile (gLogFileProtocol, L"-%5u- PROTOCOL-EXISTS-ON-STARTUP: %-60s at: %s\r\n", Number,
             GuidName,
             Event->ProtocolExistsOnStartup.ImageNames
             );
         } else {
-          PrintToFile (
-            gLogFileProtocol,
-            L"- PROTOCOL-EXISTS-ON-STARTUP: %-60g at: %s\r\n",
+          PrintToFile (gLogFileProtocol, L"-%5u- PROTOCOL-EXISTS-ON-STARTUP: %-60g at: %s\r\n", Number,
             &Event->ProtocolExistsOnStartup.Guid,
             Event->ProtocolExistsOnStartup.ImageNames
             );
         }
       } else {
         if (GuidName != NULL) {
-          PrintToFile (gLogFileProtocol, L"- PROTOCOL-EXISTS-ON-STARTUP: %s\r\n", GuidName);
+          PrintToFile (gLogFileProtocol, L"-%5u- PROTOCOL-EXISTS-ON-STARTUP: %s\r\n", Number,
+            GuidName
+            );
         } else {
-          PrintToFile (gLogFileProtocol, L"- PROTOCOL-EXISTS-ON-STARTUP: %g\r\n", &Event->ProtocolExistsOnStartup.Guid);
+          PrintToFile (gLogFileProtocol, L"-%5u- PROTOCOL-EXISTS-ON-STARTUP: %g\r\n", Number,
+            &Event->ProtocolExistsOnStartup.Guid
+            );
         }
       }
     }
@@ -324,9 +331,13 @@ AddNewEventToLog (
       }
 
       if (GuidName != NULL) {
-        PrintToFile (gLogFileProtocol, L"- PROTOCOL-REMOVED (%s): %s\r\n", Success, GuidName);
+        PrintToFile (gLogFileProtocol, L"-%5u- PROTOCOL-REMOVED (%s): %s\r\n", Number, Success,
+          GuidName
+          );
       } else {
-        PrintToFile (gLogFileProtocol, L"- PROTOCOL-REMOVED (%s): %g\r\n", Success, &Event->ProtocolRemoved.Guid);
+        PrintToFile (gLogFileProtocol, L"-%5u- PROTOCOL-REMOVED (%s): %g\r\n", Number, Success,
+          &Event->ProtocolRemoved.Guid
+          );
       }
     }
     break;
@@ -336,16 +347,21 @@ AddNewEventToLog (
       CHAR16 *ImageName  = Event->ImageLoaded.ImageName       ? Event->ImageLoaded.ImageName       : StrUnknown;
       CHAR16 *ParentName = Event->ImageLoaded.ParentImageName ? Event->ImageLoaded.ParentImageName : StrUnknown;
 
-      PrintToFile (gLogFileProtocol, L"\r\n- IMAGE-LOADED: %-60s loaded by: %s\r\n", ImageName, ParentName);
+      PrintToFile (gLogFileProtocol, L"\r\n-%5u- IMAGE-LOADED: %-60s loaded by: %s\r\n",
+        Number, ImageName, ParentName
+        );
     }
     break;
 
   case LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP:
     {
-      CHAR16 *ImageName  = Event->ImageExistsOnStartup.ImageName       ? Event->ImageExistsOnStartup.ImageName       : StrUnknown;
-      CHAR16 *ParentName = Event->ImageExistsOnStartup.ParentImageName ? Event->ImageExistsOnStartup.ParentImageName : StrUnknown;
+      LOG_ENTRY_IMAGE_EXISTS_ON_STARTUP *ImgExists = &Event->ImageExistsOnStartup;
+      CHAR16 *ImageName  = ImgExists->ImageName       ? ImgExists->ImageName       : StrUnknown;
+      CHAR16 *ParentName = ImgExists->ParentImageName ? ImgExists->ParentImageName : StrUnknown;
 
-      PrintToFile (gLogFileProtocol, L"- IMAGE-EXISTS-ON-STARTUP: %-60s loaded by: %s\r\n", ImageName, ParentName);
+      PrintToFile (gLogFileProtocol, L"-%5u- IMAGE-EXISTS-ON-STARTUP: %-60s loaded by: %s\r\n",
+        Number, ImageName, ParentName
+        );
     }
     break;
 
@@ -367,13 +383,13 @@ AddNewEventToLog (
 
       static CHAR16 Line[] = L"- --------------------------------------------------------------------------------\r\n";
       PrintToFile (gLogFileProtocol, Line);
-      PrintToFile (gLogFileProtocol, L"- BDS-STAGE-ENTERED: %s\r\n", SubType);
+      PrintToFile (gLogFileProtocol, L"-%5u- BDS-STAGE-ENTERED: %s\r\n", Number, SubType);
       PrintToFile (gLogFileProtocol, Line);
     }
     break;
 
   default:
-    PrintToFile (gLogFileProtocol, L"\r\n\r\n- ERROR: Unknown event type\r\n\r\n\r\n");
+    PrintToFile (gLogFileProtocol, L"\r\n\r\n-%5u- ERROR: Unknown event type\r\n\r\n\r\n", Number);
     break;
   }
 }
