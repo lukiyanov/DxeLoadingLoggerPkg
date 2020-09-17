@@ -11,9 +11,20 @@
 #define LOGGER_LIB_H_
 
 // -----------------------------------------------------------------------------
+/**
+ * Функция обратного вызова, вызывается при поступлении события.
+*/
+typedef
+VOID
+(*EVENT_INCOMED_FUNC) (
+  IN LOADING_EVENT *Event
+  );
+
+// -----------------------------------------------------------------------------
 typedef struct {
-  VECTOR         LogData;       // тип = LOADING_EVENT
-  EVENT_PROVIDER EventProvider;
+  VECTOR              LogData;                // тип элемента = LOADING_EVENT
+  EVENT_PROVIDER      EventProvider;
+  EVENT_INCOMED_FUNC  EventIncomedCallback;
 } LOGGER;
 
 // -----------------------------------------------------------------------------
@@ -22,13 +33,16 @@ typedef struct {
  * Функция должна быть обязательно однократно вызвана перед использованием объекта.
  *
  * @param This                      Указатель на структуру логгера, для которой выполняется инициализация.
+ * @param EventIncomed              Функция. которая будет вызываться сразу при поступлении события.
+ *                                  NULL, если не нужно.
  *
  * @retval EFI_SUCCESS              Операция завершена успешно.
  * @retval Любое другое значение    Произошла ошибка, объект не инициализирован.
  */
 EFI_STATUS
 Logger_Construct (
-  IN OUT LOGGER *This
+  IN OUT LOGGER              *This,
+  IN     EVENT_INCOMED_FUNC  EventIncomed  OPTIONAL
   );
 
 // -----------------------------------------------------------------------------

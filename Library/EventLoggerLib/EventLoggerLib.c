@@ -24,17 +24,22 @@ AddEventToLog (
  * Инициализирует структуру LOGGER.
  * Функция должна быть обязательно однократно вызвана перед использованием объекта.
  *
- * @param This                      Указатель на структуру логгера.
+ * @param This                      Указатель на структуру логгера, для которой выполняется инициализация.
+ * @param EventIncomed              Функция. которая будет вызываться сразу при поступлении события.
+ *                                  NULL, если не нужно.
  *
  * @retval EFI_SUCCESS              Операция завершена успешно.
  * @retval Любое другое значение    Произошла ошибка, объект не инициализирован.
  */
 EFI_STATUS
 Logger_Construct (
-  LOGGER *This
+  IN OUT LOGGER              *This,
+  IN     EVENT_INCOMED_FUNC  EventIncomed  OPTIONAL
   )
 {
   DBG_ENTER();
+
+  This->EventIncomedCallback = EventIncomed;
 
   EFI_STATUS Status;
 
@@ -133,17 +138,20 @@ AddEventToLog (
   )
 {
   DBG_ENTER ();
+  EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
 
   static UINTN EventCount;
   LOGGER *This = (LOGGER *)Logger;
 
-  EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
   Vector_PushBack (&This->LogData, Event);
-  gBS->RestoreTPL (OldTpl);
+
+  if (This->EventIncomedCallback != NULL) {
+    This->EventIncomedCallback (Event);
+  }
 
   if (FeaturePcdGet (PcdPrintEventNumbersToConsole)) {
     if (gST->ConOut) {
-      Print(L"---- event #%u\n", (unsigned)++EventCount);
+      Print(L"---- [event #%u] ----\n", (unsigned)++EventCount);
     }
   }
 
@@ -232,6 +240,7 @@ AddEventToLog (
   DEBUG_CODE_END ();
   DBG_INFO1 ("-----------------------------------------------------------\n");
 
+  gBS->RestoreTPL (OldTpl);
   DBG_EXIT ();
 }
 
