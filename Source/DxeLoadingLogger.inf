@@ -22,11 +22,13 @@
   BaseLib
   UefiLib
   PcdLib
+  PrintLib
   DevicePathLib
   # Наши
   EventLoggerLib
   CommonMacrosLib
   VectorLib
+  ProtocolGuidDatabaseLib
 
 [Depex]
   TRUE
