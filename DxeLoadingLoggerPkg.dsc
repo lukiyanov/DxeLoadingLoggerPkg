@@ -91,9 +91,10 @@
   ProtocolGuidDatabaseLib     | DxeLoadingLoggerPkg/Library/ProtocolGuidDatabaseLib/ProtocolGuidDatabaseLib.inf
   EventLoggerLib              | DxeLoadingLoggerPkg/Library/EventLoggerLib/EventLoggerLib.inf
   CommonMacrosLib             | DxeLoadingLoggerPkg/Library/CommonMacrosLib/CommonMacrosLib.inf
+  LoadingEventLib             | DxeLoadingLoggerPkg/Library/LoadingEventLib/LoadingEventLib.inf
 
 !if $(EVENT_PROVIDER_GST_HOOK)
-#  EventProviderLib            | DxeLoadingLoggerPkg/Library/EventProviderLib/EventProviderSystemTableHookLib/EventProviderSystemTableHookLib.inf
+  EventProviderLib            | DxeLoadingLoggerPkg/Library/EventProviderLib/EventProviderSystemTableHookLib/EventProviderSystemTableHookLib.inf
 !else
   EventProviderLib            | DxeLoadingLoggerPkg/Library/EventProviderLib/EventProviderProtocolNotifyLib/EventProviderProtocolNotifyLib.inf
 !endif

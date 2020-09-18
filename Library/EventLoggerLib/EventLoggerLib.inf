@@ -21,6 +21,7 @@
   VectorLib
   EventProviderLib
   CommonMacrosLib
+  LoadingEventLib
 
 [FeaturePcd]
   gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole
