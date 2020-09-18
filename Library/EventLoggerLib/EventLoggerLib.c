@@ -146,7 +146,7 @@ AddEventToLog (
   Vector_PushBack (&This->LogData, Event);
 
   if (This->EventIncomedCallback != NULL) {
-    This->EventIncomedCallback (Event);
+    This->EventIncomedCallback ();
   }
 
   if (FeaturePcdGet (PcdPrintEventNumbersToConsole)) {
