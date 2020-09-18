@@ -92,6 +92,7 @@
   EventLoggerLib              | DxeLoadingLoggerPkg/Library/EventLoggerLib/EventLoggerLib.inf
   CommonMacrosLib             | DxeLoadingLoggerPkg/Library/CommonMacrosLib/CommonMacrosLib.inf
   LoadingEventLib             | DxeLoadingLoggerPkg/Library/LoadingEventLib/LoadingEventLib.inf
+  TextAnimationLib            | DxeLoadingLoggerPkg/Library/TextAnimationLib/TextAnimationLib.inf
 
 !if $(EVENT_PROVIDER_GST_HOOK)
   EventProviderLib            | DxeLoadingLoggerPkg/Library/EventProviderLib/EventProviderSystemTableHookLib/EventProviderSystemTableHookLib.inf
