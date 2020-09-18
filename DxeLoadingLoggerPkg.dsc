@@ -7,6 +7,7 @@
   BUILD_TARGETS                  = DEBUG | RELEASE
   FLASH_DEFINITION               = DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.fdf
 
+
   #### BEHAVIOR ################################################################
 
   #
@@ -28,16 +29,6 @@
   #
   DEFINE PRINT_EVENT_NUMBERS_TO_CONSOLE = TRUE
 
-  #
-  # TRUE:
-  #        Делает Flush() для файла после записи каждого события.
-  #        Cильно тормозит загрузку системы, но помогает не пропустить события в случае
-  #        если системная прошивка перезагружается или выключается без нашего участия.
-  #
-  # FALSE:
-  #        Flush() по таймеру.
-  #
-  DEFINE FLUSH_LOG_FILE_AFTER_EVERY_EVENT = TRUE
 
   #### DEBUG ###################################################################
 
@@ -118,5 +109,4 @@
 
 [PcdsFeatureFlag]
   gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole | $(PRINT_EVENT_NUMBERS_TO_CONSOLE)
-  gDxeLoadingLoggerSpaceGuid.PcdFlushEveryEventEnabled     | $(FLUSH_LOG_FILE_AFTER_EVERY_EVENT)
   gDxeLoadingLoggerSpaceGuid.PcdDebugMacrosOutputEnabled   | $(DEBUG_MACROS_OUTPUT_ON)
