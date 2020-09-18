@@ -20,18 +20,6 @@
 static LOGGER             gLogger;
 static EFI_FILE_PROTOCOL  *gLogFileProtocol;
 
-static GLOBAL_REMOVE_IF_UNREFERENCED EFI_EVENT  gEventUpdateLog;
-
-// -----------------------------------------------------------------------------
-/**
- * Вызывается по таймеру, передаёт управление в ProcessNewEvents().
-*/
-VOID
-EFIAPI
-CheckAndProcessNewEvents (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
-  );
 
 // -----------------------------------------------------------------------------
 /**
@@ -104,25 +92,6 @@ Initialize (
   DBG_ENTER ();
 
   Logger_Construct (&gLogger, &ProcessNewEvents);
-
-  EFI_STATUS Status;
-
-  Status = gBS->CreateEvent (
-                  EVT_TIMER | EVT_NOTIFY_SIGNAL,
-                  TPL_NOTIFY,
-                  CheckAndProcessNewEvents,
-                  NULL,
-                  &gEventUpdateLog
-                  );
-  RETURN_ON_ERR (Status);
-
-  Status = gBS->SetTimer (
-                  gEventUpdateLog,
-                  TimerPeriodic,
-                  EFI_TIMER_PERIOD_MILLISECONDS (1000)
-                  );
-  RETURN_ON_ERR (Status);
-
   Logger_Start     (&gLogger);
 
   DBG_EXIT_STATUS (EFI_SUCCESS);
@@ -141,32 +110,11 @@ Unload (
 {
   DBG_ENTER ();
 
-  if (FeaturePcdGet (PcdFlushEveryEventEnabled)) {
-    gBS->CloseEvent (gEventUpdateLog);
-  }
-
   Logger_Destruct (&gLogger);
-
   FlushAndCloseFileProtocol(&gLogFileProtocol);
 
   DBG_EXIT_STATUS (EFI_SUCCESS);
   return EFI_SUCCESS;
-}
-
-// -----------------------------------------------------------------------------
-/**
- * Проверяет существование новых событий и при наличии обрабатывает их.
-*/
-VOID
-EFIAPI
-CheckAndProcessNewEvents (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
-  )
-{
-  // EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
-  // ProcessNewEvents ();
-  // gBS->RestoreTPL (OldTpl);
 }
 
 // -----------------------------------------------------------------------------
