@@ -451,6 +451,7 @@ CheckProtocolExistenceOnStartup (
     }
 
     StrAllocAppend(&ImageNames, L" }");
+    SHELL_FREE_NON_NULL (Handles);
   }
 
   LOADING_EVENT  Event;
