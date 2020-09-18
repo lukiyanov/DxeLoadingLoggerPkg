@@ -158,7 +158,7 @@ ProcessNewEvents ()
     }
   }
 
-  // Если у нас не вынули флешку то flush'им лог.
+  // Если у нас не вынули флешку, то flush'им лог.
   if (gLogFileProtocol) {
     gLogFileProtocol->Flush(gLogFileProtocol);
   }

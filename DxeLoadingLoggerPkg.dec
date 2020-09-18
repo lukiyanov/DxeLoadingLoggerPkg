@@ -13,9 +13,5 @@
 [PcdsFeatureFlag]
   # Печать номеров событий на экран сразу после их возникновения.
   gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole | FALSE | BOOLEAN | 1
-  # Flush'ить лог-файл после каждого события.
-  # TRUE сильно тормозит загрузку, но помогает не пропустить события в случае
-  # если системная прошивка перезагружается или выключается без нашего участия.
-  gDxeLoadingLoggerSpaceGuid.PcdFlushEveryEventEnabled     | FALSE | BOOLEAN | 2
   # Отладочный вывод.
-  gDxeLoadingLoggerSpaceGuid.PcdDebugMacrosOutputEnabled   | FALSE | BOOLEAN | 3
+  gDxeLoadingLoggerSpaceGuid.PcdDebugMacrosOutputEnabled   | FALSE | BOOLEAN | 2
