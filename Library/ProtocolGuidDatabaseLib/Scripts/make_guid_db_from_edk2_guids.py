@@ -68,7 +68,7 @@ def generate_guid_db_file():
     add_guids(guids_all, guids.dell_guids.dell_guids)
     add_guids(guids_all, guids.lenovo_guids.lenovo_guids)
 
-    with open('guid_db.h', 'w') as guid_header:
+    with open('GeneratedProtocolGuidDatabase.h', 'w') as guid_header:
         guid_header.write('#include <Uefi.h>\n\n')
 
         for guid_name in guids_all:
