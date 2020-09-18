@@ -3,7 +3,7 @@
  * Тип предназначен для сбора и хранения информации о процессе загрузки.
  */
 #include <Uefi.h>
-#include <Library/LoadingEvent.h>
+#include <Library/LoadingEventLib.h>
 #include <Library/VectorLib.h>
 #include <Library/EventProviderLib.h>
 

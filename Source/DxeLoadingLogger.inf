@@ -35,6 +35,3 @@
 
 [Protocols]
   gEfiSimpleFileSystemProtocolGuid
-
-[FeaturePcd]
-  gDxeLoadingLoggerSpaceGuid.PcdFlushEveryEventEnabled
