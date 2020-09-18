@@ -19,15 +19,12 @@
 // -----------------------------------------------------------------------------
 static LOGGER             gLogger;
 static EFI_FILE_PROTOCOL  *gLogFileProtocol;
-static VECTOR             gPreviousFsHandles;
-static UINTN              gLastSuccessfullyLoggedEventNumber;
 
 static GLOBAL_REMOVE_IF_UNREFERENCED EFI_EVENT  gEventUpdateLog;
 
 // -----------------------------------------------------------------------------
 /**
- * Проверяет существование новых событий и при наличии обрабатывает их.
- * Взаимоисключающий способ обработки событий с ProcessNewEvent().
+ * Вызывается по таймеру, передаёт управление в ProcessNewEvents().
 */
 VOID
 EFIAPI
@@ -38,13 +35,10 @@ CheckAndProcessNewEvents (
 
 // -----------------------------------------------------------------------------
 /**
- * Обрабатывает поступление нового события.
- * Взаимоисключающий способ обработки событий с CheckAndProcessNewEvents().
+ * Обрабатывает поступление новых событий, записывая их в лог.
 */
 VOID
-ProcessNewEvent (
-  IN LOADING_EVENT *Event
-  );
+ProcessNewEvents ();
 
 // -----------------------------------------------------------------------------
 /**
@@ -71,22 +65,6 @@ AddNewEventToLog (
 EFI_STATUS
 FindFileSystem (
   OUT  EFI_FILE_PROTOCOL  **LogFileProtocol
-  );
-
-// -----------------------------------------------------------------------------
-/**
- * Проверяет, есть ли среди Handles новые хэндлы.
- *
- * @param Handles     Массив хэндлов.
- * @param HandleCount Количество элементов в Handles.
- *
- * @retval TRUE   Обнаружены новые хэндлы.
- * @retval FALSE  Новых нет.
-*/
-BOOLEAN
-CheckForNewFsHandles(
-  IN EFI_HANDLE  *Handles,
-  IN UINTN       HandleCount
   );
 
 // -----------------------------------------------------------------------------
@@ -125,31 +103,25 @@ Initialize (
 {
   DBG_ENTER ();
 
-  Vector_Construct (&gPreviousFsHandles, sizeof(EFI_HANDLE), 32);
+  Logger_Construct (&gLogger, &ProcessNewEvents);
 
-  if (FeaturePcdGet (PcdFlushEveryEventEnabled)) {
-    Logger_Construct (&gLogger, &ProcessNewEvent);
-  } else {
-    Logger_Construct (&gLogger, NULL);
+  EFI_STATUS Status;
 
-    EFI_STATUS Status;
+  Status = gBS->CreateEvent (
+                  EVT_TIMER | EVT_NOTIFY_SIGNAL,
+                  TPL_NOTIFY,
+                  CheckAndProcessNewEvents,
+                  NULL,
+                  &gEventUpdateLog
+                  );
+  RETURN_ON_ERR (Status);
 
-    Status = gBS->CreateEvent (
-                    EVT_TIMER | EVT_NOTIFY_SIGNAL,
-                    TPL_NOTIFY,
-                    CheckAndProcessNewEvents,
-                    NULL,
-                    &gEventUpdateLog
-                    );
-    RETURN_ON_ERR (Status);
-
-    Status = gBS->SetTimer (
-                    gEventUpdateLog,
-                    TimerPeriodic,
-                    EFI_TIMER_PERIOD_MILLISECONDS (1000)
-                    );
-    RETURN_ON_ERR (Status);
-  }
+  Status = gBS->SetTimer (
+                  gEventUpdateLog,
+                  TimerPeriodic,
+                  EFI_TIMER_PERIOD_MILLISECONDS (1000)
+                  );
+  RETURN_ON_ERR (Status);
 
   Logger_Start     (&gLogger);
 
@@ -169,14 +141,11 @@ Unload (
 {
   DBG_ENTER ();
 
-  // CloseLogFile ();
-
   if (FeaturePcdGet (PcdFlushEveryEventEnabled)) {
     gBS->CloseEvent (gEventUpdateLog);
   }
 
   Logger_Destruct (&gLogger);
-  Vector_Destruct (&gPreviousFsHandles);
 
   FlushAndCloseFileProtocol(&gLogFileProtocol);
 
@@ -187,7 +156,6 @@ Unload (
 // -----------------------------------------------------------------------------
 /**
  * Проверяет существование новых событий и при наличии обрабатывает их.
- * Взаимоисключающий способ обработки событий с ProcessNewEvent().
 */
 VOID
 EFIAPI
@@ -196,49 +164,56 @@ CheckAndProcessNewEvents (
   IN VOID       *Context
   )
 {
-  // DBG_ENTER ();
-
-  //
-  // TODO
-  //
-
-  // DBG_EXIT ();
+  // EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
+  // ProcessNewEvents ();
+  // gBS->RestoreTPL (OldTpl);
 }
 
 // -----------------------------------------------------------------------------
 /**
  * Обрабатывает поступление нового события.
- * Взаимоисключающий способ обработки событий с CheckAndProcessNewEvents().
 */
 VOID
-ProcessNewEvent (
-  LOADING_EVENT *Event
-  )
+ProcessNewEvents ()
 {
   DBG_ENTER ()
 
+  static UINTN gLoggedEventCount;
+  EFI_STATUS Status;
+
   if (gLogFileProtocol == NULL) {
-    EFI_STATUS Status;
+    // В случае если у нас отняли флешку начинаем писать лог с начала.
+    gLoggedEventCount = 0;
+
     Status = FindFileSystem (&gLogFileProtocol);
     if (EFI_ERROR (Status)) {
-      DBG_EXIT_STATUS (EFI_NOT_READY);
+      DBG_EXIT_STATUS (Status);
       return;
     }
   }
 
-  AddNewEventToLog(Event, ++gLastSuccessfullyLoggedEventNumber, &gLogFileProtocol);
+  for (UINTN EventCount = Logger_GetEventCount (&gLogger); gLoggedEventCount < EventCount; ++gLoggedEventCount) {
+    LOADING_EVENT Event;
+    Status = Logger_GetEvent (&gLogger, gLoggedEventCount, &Event);
+    if (EFI_ERROR (Status)) {
+      // Такого происходить не должно вообще никогда.
+      DBG_EXIT_STATUS (Status);
+      return;
+    }
 
+    AddNewEventToLog(&Event, gLoggedEventCount + 1, &gLogFileProtocol);
+
+    if (gLogFileProtocol == NULL) {
+      // Флешку вынули во время записи.
+      // Ничего страшного, запишем лог заново когда её снова подключат.
+      break;
+    }
+  }
+
+  // Если у нас не вынули флешку то flush'им лог.
   if (gLogFileProtocol) {
     gLogFileProtocol->Flush(gLogFileProtocol);
   }
-
-  // else {
-  // TODO: сохранить событие и вывести в лог позже.
-  // }
-
-  // TODO: выводить в лог все предыдущие события
-
-  // TODO: выводить порядковые номера событий
 
   DBG_EXIT ();
 }
@@ -427,13 +402,6 @@ FindFileSystem (
                   );
   RETURN_ON_ERR (Status)
 
-  if (!CheckForNewFsHandles(Handles, HandleCount)) {
-    DBG_EXIT_STATUS (EFI_NOT_FOUND)
-    return FALSE;
-  }
-
-  DBG_INFO1 ("New fs found. Searching a file system with the file \"log.txt\"...\n");
-
   for (UINTN Index = 0; Index < HandleCount; Index++) {
     EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *FileSystemProtocol = NULL;
 
@@ -490,9 +458,9 @@ FindFileSystem (
                       EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE | EFI_FILE_MODE_CREATE,
                       0
                       );
+    FileSystemRoot->Close(FileSystemRoot);
     if (EFI_ERROR (Status)) {
       DBG_INFO1 ("Can\t create log.txt.\n");
-      FileSystemRoot->Close(FileSystemRoot);
       continue;
     }
 
@@ -510,54 +478,6 @@ FindFileSystem (
   SHELL_FREE_NON_NULL (Handles);
   DBG_EXIT_STATUS (EFI_NOT_FOUND)
   return EFI_NOT_FOUND;
-}
-
-// -----------------------------------------------------------------------------
-/**
- * Проверяет, есть ли среди Handles новые хэндлы.
- *
- * @param Handles     Массив хэндлов.
- * @param HandleCount Количество элементов в Handles.
- *
- * @retval TRUE   Обнаружены новые хэндлы.
- * @retval FALSE  Новых нет.
-*/
-BOOLEAN
-CheckForNewFsHandles(
-  IN EFI_HANDLE  *Handles,
-  IN UINTN       HandleCount
-  )
-{
-  DBG_ENTER ()
-
-  BOOLEAN NewFsFound = FALSE;
-  for (UINTN Index = 0; Index < HandleCount; ++Index) {
-    BOOLEAN HandleIsAlreadyStored = FALSE;
-
-    FOR_EACH_VCT (EFI_HANDLE, FsHandle, gPreviousFsHandles) {
-      if (*FsHandle == Handles[Index]) {
-        HandleIsAlreadyStored = TRUE;
-      }
-    }
-
-    if (!HandleIsAlreadyStored) {
-      NewFsFound = TRUE;
-      break;
-    }
-  }
-
-  if (!NewFsFound) {
-    DBG_EXIT_STATUS (EFI_NOT_FOUND)
-    return FALSE;
-  }
-
-  Vector_Clear (&gPreviousFsHandles);
-  for (UINTN Index = 0; Index < HandleCount; Index++) {
-    Vector_PushBack (&gPreviousFsHandles, &Handles[Index]);
-  }
-
-  DBG_EXIT ();
-  return TRUE;
 }
 
 // -----------------------------------------------------------------------------
@@ -587,8 +507,6 @@ PrintToFile (
   UINTN Length = UnicodeVSPrint (Buffer, PRINT_TO_FILE_BUFFER_LENGTH * sizeof(CHAR16), Format, Marker) * sizeof(CHAR16);
   VA_END (Marker);
 
-  DBG_INFO ("String is: %s", Buffer);
-
   EFI_STATUS Status;
   Status = (*FileProtocol)->Write(
                             (*FileProtocol),
@@ -596,6 +514,7 @@ PrintToFile (
                             Buffer
                             );
   if (EFI_ERROR (Status)) {
+    (*FileProtocol)->Close(*FileProtocol);
     *FileProtocol = NULL;
 
     DBG_EXIT_STATUS (EFI_ACCESS_DENIED);
