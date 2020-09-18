@@ -77,7 +77,11 @@ Logger_Destruct (
 
   Logger_Stop(This);
 
+  FOR_EACH_VCT (LOADING_EVENT, Event, This->LogData) {
+    LoadingEvent_Destruct (Event);
+  }
   Vector_Destruct (&This->LogData);
+
   EventProvider_Destruct (&This->EventProvider);
 
   DBG_EXIT ();

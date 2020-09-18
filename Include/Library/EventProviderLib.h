@@ -3,7 +3,7 @@
  * Объекты типа генерируют события, связанные с загрузкой системы.
  */
 #include <Uefi.h>
-#include <Library/LoadingEvent.h>
+#include <Library/LoadingEventLib.h>
 
 #ifndef EVENT_PROVIDER_LIB_H_
 #define EVENT_PROVIDER_LIB_H_
