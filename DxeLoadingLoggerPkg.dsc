@@ -1,27 +1,69 @@
 [Defines]
   PLATFORM_NAME                  = DxeLoadingLogger
-  PLATFORM_GUID                  = a8b753ed-a2b9-4d3e-b73b-c0a5261dba07
+  PLATFORM_GUID                  = 9FE12CD6-D8B8-424D-B703-ED19D908C122
   PLATFORM_VERSION               = 1.0
   DSC_SPECIFICATION              = 0x0001001B
   SUPPORTED_ARCHITECTURES        = X64
-  BUILD_TARGETS                  = DEBUG|RELEASE
+  BUILD_TARGETS                  = DEBUG | RELEASE
   FLASH_DEFINITION               = DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.fdf
 
-  DEFINE DEBUG_PRINT_ERROR_LEVEL    = 0x80000040
-  DEFINE DEBUG_PROPERTY_MASK        = 0x0f
+  #### BEHAVIOR ################################################################
 
+  #
+  # Определяет, каким способом происходит сбор событий.
+  #
+  # TRUE:
+  #        События собираются путём модификации gST.
+  #        Этот подход даёт больше информации, но системная прошивка может сопротивляться данному методу.
+  #
+  # FALSE:
+  #        События собираются посредством вызова RegisterProtocolNotify() для известных протоколов.
+  #        Гарантированно совместим со всеми прошивками, но даёт гораздо меньше информации.
+  #
+  DEFINE EVENT_PROVIDER_GST_HOOK = FALSE  # TODO: в RELEASE-версии установить в TRUE
 
-[PcdsFixedAtBuild]
-  # DebugLib
-  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask    | $(DEBUG_PROPERTY_MASK)
-  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel | $(DEBUG_PRINT_ERROR_LEVEL)
+  #
+  # Выводить номера событий в консоль.
+  # Полезно для сопоставления событий с тем, что выводит системная прошивка.
+  #
+  DEFINE PRINT_EVENT_NUMBERS_TO_CONSOLE = TRUE
+
+  #
+  # TRUE:
+  #        Делает Flush() для файла после записи каждого события.
+  #        Cильно тормозит загрузку системы, но помогает не пропустить события в случае
+  #        если системная прошивка перезагружается или выключается без нашего участия.
+  #
+  # FALSE:
+  #        Flush() по таймеру.
+  #
+  DEFINE FLUSH_LOG_FILE_AFTER_EVERY_EVENT = TRUE
+
+  #### DEBUG ###################################################################
+
+  #
+  # Генерит подробный и длинный лог свой работы.
+  # Только для отладки.
+  #
+  DEFINE DEBUG_MACROS_OUTPUT_ON = FALSE
+
+  #
+  # TRUE:
+  #        Отладочные события выводятся в COM-порт.
+  #
+  # FALSE:
+  #        Отладочные события выводятся на экран.
+  #
+  DEFINE DEBUG_OUTPUT_TO_SERIAL  = FALSE
+
+  DEFINE DEBUG_PRINT_ERROR_LEVEL = 0x80000040
+  DEFINE DEBUG_PROPERTY_MASK     = 0x0f
 
 
 [BuildOptions]
+  GCC:*_*_*_CC_FLAGS                   = -std=c11
   GCC:RELEASE_*_*_CC_FLAGS             = -DMDEPKG_NDEBUG
-  GCC:DEBUG_*_*_CC_FLAGS               = -g
-  MSFT:RELEASE_*_*_CC_FLAGS            = /D MDEPKG_NDEBUG /WX /O1 /wd"4201" /wd"4117" /D DEBUG_MACROS_ENABLE_FULL_PRINT
-  MSFT:DEBUG_*_*_CC_FLAGS              = /X /Zc:wchar_t /Oi- /GL- /WX /Od /wd"4201" /wd"4117"
+  MSFT:RELEASE_*_*_CC_FLAGS            = /D MDEPKG_NDEBUG
 
 
 [LibraryClasses]
@@ -42,9 +84,39 @@
   PcdLib                      | MdePkg/Library/BasePcdLibNull/BasePcdLibNull.inf
   PrintLib                    | MdePkg/Library/BasePrintLib/BasePrintLib.inf
   UefiRuntimeServicesTableLib | MdePkg/Library/UefiRuntimeServicesTableLib/UefiRuntimeServicesTableLib.inf
-  DebugLib                    | MdePkg/Library/UefiDebugLibConOut/UefiDebugLibConOut.inf
   DebugPrintErrorLevelLib     | MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
+
+!if $(DEBUG_OUTPUT_TO_SERIAL)
+  DebugLib                    | MdePkg/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
+  SerialPortLib               | PcAtChipsetPkg/Library/SerialIoLib/SerialIoLib.inf
+!else
+  DebugLib                    | MdePkg/Library/UefiDebugLibConOut/UefiDebugLibConOut.inf
+!endif
+
+  #
+  # Библиотеки, входящие в состав данного пакета.
+  #
+  VectorLib                   | DxeLoadingLoggerPkg/Library/VectorLib/VectorLib.inf
+  ProtocolGuidDatabaseLib     | DxeLoadingLoggerPkg/Library/ProtocolGuidDatabaseLib/ProtocolGuidDatabaseLib.inf
+  EventLoggerLib              | DxeLoadingLoggerPkg/Library/EventLoggerLib/EventLoggerLib.inf
+  CommonMacrosLib             | DxeLoadingLoggerPkg/Library/CommonMacrosLib/CommonMacrosLib.inf
+
+!if $(EVENT_PROVIDER_GST_HOOK)
+#  EventProviderLib            | DxeLoadingLoggerPkg/Library/EventProviderLib/EventProviderSystemTableHookLib/EventProviderSystemTableHookLib.inf
+!else
+  EventProviderLib            | DxeLoadingLoggerPkg/Library/EventProviderLib/EventProviderProtocolNotifyLib/EventProviderProtocolNotifyLib.inf
+!endif
 
 
 [Components]
   DxeLoadingLoggerPkg/Source/DxeLoadingLogger.inf
+
+[PcdsFixedAtBuild]
+  # DebugLib
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask            | $(DEBUG_PROPERTY_MASK)
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel         | $(DEBUG_PRINT_ERROR_LEVEL)
+
+[PcdsFeatureFlag]
+  gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole | $(PRINT_EVENT_NUMBERS_TO_CONSOLE)
+  gDxeLoadingLoggerSpaceGuid.PcdFlushEveryEventEnabled     | $(FLUSH_LOG_FILE_AFTER_EVERY_EVENT)
+  gDxeLoadingLoggerSpaceGuid.PcdDebugMacrosOutputEnabled   | $(DEBUG_MACROS_OUTPUT_ON)

@@ -1,0 +1,17 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = VectorLib
+  FILE_GUID                      = F38556F9-B8AB-4B7E-AB05-15168E1A7726
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = VectorLib | DXE_DRIVER UEFI_APPLICATION UEFI_DRIVER
+
+[Sources]
+  VectorLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
