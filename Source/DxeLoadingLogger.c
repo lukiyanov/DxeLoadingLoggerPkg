@@ -8,6 +8,7 @@
 #include <Library/CommonMacrosLib.h>
 #include <Library/VectorLib.h>
 #include <Library/ProtocolGuidDatabaseLib.h>
+#include <Library/TextAnimationLib.h>
 
 #include <Protocol/SimpleFileSystem.h>
 
@@ -140,16 +141,20 @@ ProcessNewEvents ()
     }
   }
 
+  StartPlayingAnimation ();
+
   for (UINTN EventCount = Logger_GetEventCount (&gLogger); gLoggedEventCount < EventCount; ++gLoggedEventCount) {
     LOADING_EVENT Event;
     Status = Logger_GetEvent (&gLogger, gLoggedEventCount, &Event);
     if (EFI_ERROR (Status)) {
       // Такого происходить не должно вообще никогда.
+      StopPlayingAnimation();
       DBG_EXIT_STATUS (Status);
       return;
     }
 
     AddNewEventToLog(&Event, gLoggedEventCount + 1, &gLogFileProtocol);
+    UpdatePlayingAnimation ();
 
     if (gLogFileProtocol == NULL) {
       // Флешку вынули во время записи.
@@ -162,6 +167,8 @@ ProcessNewEvents ()
   if (gLogFileProtocol) {
     gLogFileProtocol->Flush(gLogFileProtocol);
   }
+
+  StopPlayingAnimation ();
 
   DBG_EXIT ();
 }

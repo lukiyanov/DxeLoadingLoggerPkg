@@ -29,6 +29,7 @@
   CommonMacrosLib
   VectorLib
   ProtocolGuidDatabaseLib
+  TextAnimationLib
 
 [Depex]
   TRUE

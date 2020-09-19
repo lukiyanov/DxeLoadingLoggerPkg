@@ -154,8 +154,12 @@ AddEventToLog (
   }
 
   if (FeaturePcdGet (PcdPrintEventNumbersToConsole)) {
-    if (gST->ConOut) {
-      Print(L"---- [event #%u] ----\n", (unsigned)++EventCount);
+    // Два данных типа событий происходят до нашей загрузки, поэтому нет смысла писать о них в консоль.
+    // Ведь пишем мы в консоль только для того чтобы сопоставить момент возникновения события с выводом на экран.
+    if (gST->ConOut
+      && Event->Type != LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP
+      && Event->Type != LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP) {
+        Print(L"---- [event #%u] ----\n", (unsigned)++EventCount);
     }
   }
 

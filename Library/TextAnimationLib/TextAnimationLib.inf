@@ -1,0 +1,19 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = TextAnimationLib
+  FILE_GUID                      = C509CCBD-1EE6-409A-B2BE-FAF372C1F7B8
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = TextAnimationLib | DXE_DRIVER UEFI_APPLICATION UEFI_DRIVER
+
+[Sources]
+  TextAnimationLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  CommonMacrosLib
+  UefiLib
