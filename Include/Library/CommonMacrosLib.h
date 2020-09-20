@@ -16,4 +16,8 @@
     (Pointer) = NULL;                 \
   }
 
+// Таким образом указываем тип элементов контейнера.
+// Никакого смысла кроме документирования не несёт.
+#define TYPE(ContainerElementTypeName)
+
 #endif  // COMMON_MACROS_H_

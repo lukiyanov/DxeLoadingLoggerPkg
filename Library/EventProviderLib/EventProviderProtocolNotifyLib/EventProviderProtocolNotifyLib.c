@@ -15,28 +15,24 @@
 #include <Library/VectorLib.h>
 #include <Library/ProtocolGuidDatabaseLib.h>
 #include <Library/CommonMacrosLib.h>
-
+#include <Library/HandleDatabaseDumpLib.h>
 
 // -----------------------------------------------------------------------------
 #define CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE 128
-
 
 // -----------------------------------------------------------------------------
 /// EVENT_PROVIDER -> Data
 typedef struct
 {
   // Хэндлы создаваемых нами событий и, соответственно, которые мы должны удалить.
-  // Тип - EFI_EVENT.
-  VECTOR EventHandles;
+  VECTOR TYPE (EFI_EVENT) EventHandles;
 
   // Предыдущий дамп хэндлов, содержащих EFI_LOADED_IMAGE_PROTOCOL.
   // Используется для детекта новых загруженных образов.
-  // Тип - HANDLE.
-  VECTOR LoadedImageHandles;
+  VECTOR TYPE (HANDLE)    LoadedImageHandles;
 
   // Структуры, передающиеся в ProtocolInstalledCallback().
-  // Тип - NOTIFY_FUNCTION_CONTEXT.
-  VECTOR Contexts;
+  VECTOR TYPE (NOTIFY_FUNCTION_CONTEXT) Contexts;
 } EVENT_PROVIDER_DATA_STRUCT;
 
 // -----------------------------------------------------------------------------
