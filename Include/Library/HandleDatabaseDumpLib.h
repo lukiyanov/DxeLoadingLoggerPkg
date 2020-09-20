@@ -1,5 +1,6 @@
 #include <Uefi.h>
 #include <Library/VectorLib.h>
+#include <Library/CommonMacrosLib.h>
 
 #ifndef HANDLE_DATABASE_DUMP_H_
 #define HANDLE_DATABASE_DUMP_H_
@@ -8,14 +9,11 @@
 //------------------------------------------------------------------------------
 typedef struct
 {
-  EFI_HANDLE Handle;
-  VECTOR     Protocols;   // Vector <EFI_GUID>
+  EFI_HANDLE              Handle;
+  VECTOR TYPE (EFI_GUID)  InstalledProtocolGuids;
 } HANDLE_DATABASE_ENTRY;
 
-typedef struct
-{
-  VECTOR Entries;         // Vector <HANDLE_DATABASE_ENTRY>
-} HANDLE_DATABASE_DUMP;
+typedef VECTOR TYPE (HANDLE_DATABASE_ENTRY)  HANDLE_DATABASE_DUMP;
 
 
 //------------------------------------------------------------------------------
@@ -38,23 +36,43 @@ HandleDatabaseDump_Destruct (
 
 //------------------------------------------------------------------------------
 /**
- * Возвращает те хэндлы из DumpNew, на которые установлен протокол ProtocolGuid
- * и которых или не было в DumpOld или на них не был установлен протокол ProtocolGuid.
+ * Возвращает хэндлы из Dump, на которые установлен протокол ProtocolGuid.
  *
- * @param DumpOld           Старый дамп HandleDB.
- * @param DumpNew           Новый дамп HandleDB.
+ * @param Dump              Дамп, в котором мы ищем хэндлы.
  * @param ProtocolGuid      GUID искомого протокола.
- * @param VectorNewHandles  Вектор с новыми хэндлами. Не забыть корректно уничтожить его.
+ * @param Handles           Вектор с хэндлами, на которые установлен протокол.
+ *                          Его НЕ нужно заранее инициализировать функцией Vector_Create ().
+ *                          Не забыть корректно уничтожить его.
  *
- * @param EFI_SUCCESS       Всё ок, результат в VectorNewHandles.
+ * @param EFI_SUCCESS       Всё ок, результат в Handles.
  * @param Что-то другое     Операция не удалась.
 */
 EFI_STATUS
-HandleDatabaseDump_GetNewHandlesForProtocol (
-  IN  HANDLE_DATABASE_DUMP *DumpOld,
-  IN  HANDLE_DATABASE_DUMP *DumpNew,
-  IN  EFI_GUID             *ProtocolGuid,
-  OUT VECTOR               *VectorNewHandles
+HandleDatabaseDump_PeekHandlesWithProtocol (
+  IN  HANDLE_DATABASE_DUMP     *Dump,
+  IN  EFI_GUID                 *ProtocolGuid,
+  OUT VECTOR TYPE (EFI_HANDLE) *Handles
+  );
+
+//------------------------------------------------------------------------------
+/**
+ * Возвращает те хэндлы из DumpNew, на которые установлен протокол ProtocolGuid
+ * и которых при этом не был установлен протокол ProtocolGuid в DumpOld.
+ *
+ * @param HandlesOld        Старый набор хэндлов.
+ * @param HandlesNew        Новый набор хэндлов.
+ * @param HandlesAdded      Вектор с хэндлами, добавленными в HandlesNew и отсутствующими в HandlesOld.
+ *                          Его НЕ нужно заранее инициализировать функцией Vector_Create ().
+ *                          Не забыть корректно уничтожить его.
+ *
+ * @param EFI_SUCCESS       Всё ок, результат в HandlesAdded.
+ * @param Что-то другое     Операция не удалась.
+*/
+EFI_STATUS
+HandleDatabaseDump_GetAddedHandles (
+  IN  VECTOR TYPE (EFI_HANDLE) *HandlesOld,
+  IN  VECTOR TYPE (EFI_HANDLE) *HandlesNew,
+  OUT VECTOR TYPE (EFI_HANDLE) *HandlesAdded
   );
 
 //------------------------------------------------------------------------------

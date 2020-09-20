@@ -1,4 +1,9 @@
+#include <Uefi.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Library/BaseMemoryLib.h>
+
 #include <Library/HandleDatabaseDumpLib.h>
+#include <Library/CommonMacrosLib.h>
 
 //------------------------------------------------------------------------------
 /**
@@ -9,7 +14,72 @@ GetHandleDatabaseDump (
   OUT HANDLE_DATABASE_DUMP *Dump
   )
 {
-  return EFI_UNSUPPORTED;
+  DBG_ENTER ();
+
+  if (Dump == NULL) {
+    DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
+    return EFI_INVALID_PARAMETER;
+  }
+
+  EFI_STATUS Status;
+  EFI_HANDLE *Handles;
+  UINTN      HandleCount;
+
+  Status = gBS->LocateHandleBuffer (
+                  AllHandles,
+                  NULL,
+                  NULL,
+                  &HandleCount,
+                  &Handles
+                  );
+  RETURN_ON_ERR (Status);
+
+  Status = Vector_Construct (
+            Dump,
+            sizeof(HANDLE_DATABASE_ENTRY),
+            HandleCount
+            );
+  RETURN_ON_ERR (Status);
+
+  for (UINTN Index = 0; Index < HandleCount; ++Index) {
+    EFI_GUID **ProtocolGuidArray = NULL;
+    UINTN    ArrayCount;
+
+    Status = gBS->ProtocolsPerHandle (
+                    Handles[Index],
+                    &ProtocolGuidArray,
+                    &ArrayCount
+                    );
+    if (EFI_ERROR (Status)) {
+      DBG_ERROR ("Error in ProtocolsPerHandle(): %r", Status);
+      continue;
+    }
+
+    HANDLE_DATABASE_ENTRY HandleInfo;
+    HandleInfo.Handle = Handles[Index];
+    Status = Vector_Construct (
+              &HandleInfo.InstalledProtocolGuids,
+              sizeof(EFI_GUID),
+              ArrayCount
+              );
+    if (EFI_ERROR (Status)) {
+      DBG_ERROR ("Error in Vector_Construct(): %r", Status);
+      SHELL_FREE_NON_NULL(ProtocolGuidArray);
+      continue;
+    }
+
+    for (UINTN ProtocolIndex = 0; ProtocolIndex < ArrayCount; ProtocolIndex++) {
+      EFI_GUID *ProtocolGuid = ProtocolGuidArray[ProtocolIndex];
+
+      Vector_PushBack (&HandleInfo.InstalledProtocolGuids, ProtocolGuid);
+    }
+
+    SHELL_FREE_NON_NULL(ProtocolGuidArray);
+  }
+
+  SHELL_FREE_NON_NULL (Handles);
+  DBG_EXIT_STATUS (EFI_SUCCESS);
+  return EFI_SUCCESS;
 }
 
 //------------------------------------------------------------------------------
@@ -21,31 +91,110 @@ HandleDatabaseDump_Destruct (
   IN OUT HANDLE_DATABASE_DUMP *Dump
   )
 {
-  ;
+  DBG_ENTER ();
+
+  if (Dump == NULL) {
+    DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
+    return;
+  }
+
+  FOR_EACH_VCT (HANDLE_DATABASE_ENTRY, DbEntry, *Dump) {
+    Vector_Destruct (&DbEntry->InstalledProtocolGuids);
+  }
+
+  Vector_Destruct (Dump);
+
+  DBG_EXIT ();
+}
+
+//------------------------------------------------------------------------------
+/**
+ * Возвращает хэндлы из Dump, на которые установлен протокол ProtocolGuid.
+ *
+ * @param Dump              Дамп, в котором мы ищем хэндлы.
+ * @param ProtocolGuid      GUID искомого протокола.
+ * @param Handles           Вектор с хэндлами, на которые установлен протокол. Не забыть корректно уничтожить его.
+ *
+ * @param EFI_SUCCESS       Всё ок, результат в Handles.
+ * @param Что-то другое     Операция не удалась.
+*/
+EFI_STATUS
+HandleDatabaseDump_PeekHandlesWithProtocol (
+  IN  HANDLE_DATABASE_DUMP     *Dump,
+  IN  EFI_GUID                 *ProtocolGuid,
+  OUT VECTOR TYPE (EFI_HANDLE) *Handles
+  )
+{
+  DBG_ENTER ();
+
+  if (Dump == NULL || ProtocolGuid == NULL || Handles == NULL) {
+    DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
+    return EFI_INVALID_PARAMETER;
+  }
+
+  Vector_Construct (Handles, sizeof(EFI_HANDLE), 2);
+  FOR_EACH_VCT (HANDLE_DATABASE_ENTRY, DbEntry, *Dump) {
+    FOR_EACH_VCT (EFI_GUID, Guid, DbEntry->InstalledProtocolGuids) {
+      if (CompareGuid (Guid, ProtocolGuid)) {
+        Vector_PushBack (Handles, &DbEntry->Handle);
+        break;
+      }
+    }
+  }
+
+  DBG_EXIT_STATUS (EFI_SUCCESS);
+  return EFI_SUCCESS;
 }
 
 //------------------------------------------------------------------------------
 /**
  * Возвращает те хэндлы из DumpNew, на которые установлен протокол ProtocolGuid
- * и которых или не было в DumpOld или на них не был установлен протокол ProtocolGuid.
+ * и которых при этом не был установлен протокол ProtocolGuid в DumpOld.
  *
- * @param DumpOld           Старый дамп HandleDB.
- * @param DumpNew           Новый дамп HandleDB.
- * @param ProtocolGuid      GUID искомого протокола.
- * @param VectorNewHandles  Вектор с новыми хэндлами. Не забыть корректно уничтожить его.
+ * @param HandlesOld        Старый набор хэндлов.
+ * @param HandlesNew        Новый набор хэндлов.
+ * @param HandlesAdded      Вектор с хэндлами, добавленными в HandlesNew и отсутствующими в HandlesOld.
+ *                          Его НЕ нужно заранее инициализировать функцией Vector_Create ().
+ *                          Не забыть корректно уничтожить его.
  *
- * @param EFI_SUCCESS       Всё ок, результат в VectorNewHandles.
+ * @param EFI_SUCCESS       Всё ок, результат в HandlesAdded.
  * @param Что-то другое     Операция не удалась.
 */
 EFI_STATUS
-HandleDatabaseDump_GetNewHandlesForProtocol (
-  IN  HANDLE_DATABASE_DUMP *DumpOld,
-  IN  HANDLE_DATABASE_DUMP *DumpNew,
-  IN  EFI_GUID             *ProtocolGuid,
-  OUT VECTOR               *VectorNewHandles
+HandleDatabaseDump_GetAddedHandles (
+  IN  VECTOR TYPE (EFI_HANDLE) *HandlesOld,
+  IN  VECTOR TYPE (EFI_HANDLE) *HandlesNew,
+  OUT VECTOR TYPE (EFI_HANDLE) *HandlesAdded
   )
 {
-  EFI_UNSUPPORTED;
+  DBG_ENTER ();
+
+  if (HandlesOld == NULL || HandlesNew == NULL || HandlesAdded == NULL) {
+    DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
+    return EFI_INVALID_PARAMETER;
+  }
+
+  EFI_STATUS Status;
+  Status = Vector_Construct (HandlesAdded, sizeof(EFI_HANDLE), 2);
+  RETURN_ON_ERR (Status);
+
+  FOR_EACH_VCT (EFI_HANDLE, HandleNew, *HandlesNew) {
+    BOOLEAN Found = FALSE;
+
+    FOR_EACH_VCT (EFI_HANDLE, HandleOld, *HandlesOld) {
+      if (*HandleNew == *HandleOld) {
+        Found = TRUE;
+        continue;
+      }
+    }
+
+    if (!Found) {
+      Vector_PushBack (HandlesAdded, HandleNew);
+    }
+  }
+
+  DBG_EXIT_STATUS (EFI_SUCCESS);
+  return EFI_SUCCESS;
 }
 
 //------------------------------------------------------------------------------
