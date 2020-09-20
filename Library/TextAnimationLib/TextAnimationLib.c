@@ -8,8 +8,8 @@
 //------------------------------------------------------------------------------
 STATIC UINTN   gAnimationIndex;
 STATIC BOOLEAN gSavedEnableCursor;
-STATIC CHAR16  OutStr[] = L"Log writing: *";
-STATIC CHAR16  ClrStr[] = L"              ";
+STATIC CHAR16  OutStr[] = L" Log writing: * ";
+STATIC CHAR16  ClrStr[] = L"                ";
 STATIC UINTN   UpdateCounter;
 
 #define STR_SIZE(Str) ((sizeof(Str) / sizeof(Str[0]) - 1))
@@ -70,7 +70,7 @@ UpdatePlayingAnimation ()
 
   STATIC CHAR16 AnimationChars[] = L"|/-\\|/-\\";
 
-  OutStr[STR_SIZE (OutStr) - 1] = AnimationChars[gAnimationIndex++];
+  OutStr[STR_SIZE (OutStr) - 2] = AnimationChars[gAnimationIndex++];
   if (gAnimationIndex >= STR_SIZE (AnimationChars)) {
     gAnimationIndex = 0;
   }
