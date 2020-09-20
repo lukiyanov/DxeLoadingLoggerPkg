@@ -541,6 +541,10 @@ ProtocolInstalledCallback (
       // Ошибка во время детекта новых образов.
       Event.ImageLoaded.ImageName       = StrAllocCopy (Failed);
       Event.ImageLoaded.ParentImageName = NULL;
+    } else if (ProtocolHandle == gImageHandle) {
+      // Не логируем событие загрузки собственного образа.
+      DBG_EXIT ();
+      return;
     } else {
       // Ок.
       GetHandleImageNameAndParentImageName (
