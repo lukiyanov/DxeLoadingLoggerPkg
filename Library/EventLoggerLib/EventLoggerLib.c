@@ -144,7 +144,6 @@ AddEventToLog (
   DBG_ENTER ();
   EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
 
-  static UINTN EventCount;
   LOGGER *This = (LOGGER *)Logger;
 
   Vector_PushBack (&This->LogData, Event);
@@ -159,7 +158,7 @@ AddEventToLog (
     if (gST->ConOut
       && Event->Type != LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP
       && Event->Type != LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP) {
-        Print(L"---- [event #%u] ----\n", (unsigned)++EventCount);
+        Print(L"---- [event #%u] ----\n", (unsigned) Vector_Size (&This->LogData));
     }
   }
 
@@ -292,20 +291,20 @@ Logger_GetEvent(
 {
   DBG_ENTER ();
 
-  EFI_STATUS Success;
+  EFI_STATUS Status;
   EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
 
   LOADING_EVENT *Event = Vector_Get(&This->LogData, Index);
   if (Event == NULL) {
-    Success = EFI_INVALID_PARAMETER;
+    Status = EFI_INVALID_PARAMETER;
   } else {
     *ResultEvent = *Event;
-    Success = EFI_SUCCESS;
+    Status = EFI_SUCCESS;
   }
 
   gBS->RestoreTPL (OldTpl);
-  DBG_EXIT_STATUS (Success);
-  return Success;
+  DBG_EXIT_STATUS (Status);
+  return Status;
 }
 
 // -----------------------------------------------------------------------------

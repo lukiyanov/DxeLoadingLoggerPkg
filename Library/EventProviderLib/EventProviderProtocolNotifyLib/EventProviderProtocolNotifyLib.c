@@ -15,28 +15,21 @@
 #include <Library/VectorLib.h>
 #include <Library/ProtocolGuidDatabaseLib.h>
 #include <Library/CommonMacrosLib.h>
-
+#include <Library/HandleDatabaseDumpLib.h>
 
 // -----------------------------------------------------------------------------
 #define CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE 128
-
+#define GET_HANDLE_NAME_BUFFER_SIZE          1024
 
 // -----------------------------------------------------------------------------
 /// EVENT_PROVIDER -> Data
 typedef struct
 {
   // Хэндлы создаваемых нами событий и, соответственно, которые мы должны удалить.
-  // Тип - EFI_EVENT.
-  VECTOR EventHandles;
-
-  // Предыдущий дамп хэндлов, содержащих EFI_LOADED_IMAGE_PROTOCOL.
-  // Используется для детекта новых загруженных образов.
-  // Тип - HANDLE.
-  VECTOR LoadedImageHandles;
+  VECTOR TYPE (EFI_EVENT) EventHandles;
 
   // Структуры, передающиеся в ProtocolInstalledCallback().
-  // Тип - NOTIFY_FUNCTION_CONTEXT.
-  VECTOR Contexts;
+  VECTOR TYPE (NOTIFY_FUNCTION_CONTEXT) Contexts;
 } EVENT_PROVIDER_DATA_STRUCT;
 
 // -----------------------------------------------------------------------------
@@ -45,13 +38,13 @@ typedef struct
 {
   EVENT_PROVIDER *This;
   EFI_GUID       *Guid;
+  VOID           *Registration;
 } NOTIFY_FUNCTION_CONTEXT;
 
 
 // -----------------------------------------------------------------------------
 /**
  * Создаёт по LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP для каждого образа, уже загруженного в момент нашего запуска.
- * Создаёт начальное состояние для EVENT_PROVIDER_DATA_STRUCT->LoadedImageHandles.
 */
 EFI_STATUS
 DetectImagesLoadedOnStartup (
@@ -87,19 +80,6 @@ EFIAPI
 ProtocolInstalledCallback (
   IN  EFI_EVENT  Event,
   IN  VOID       *Context
-  );
-
-// -----------------------------------------------------------------------------
-/**
- * Возвращает список хэндлов исполняемых образов, установленных с момента прошлого вызова.
- * Пользователь должен освободить память под возвращаемый функцией массив.
- *
- * @retval NULL             Что-то пошло не так.
- * @return Массив, последний элемент которого NULL
-*/
-EFI_HANDLE *
-GetNewLoadedImageHandles (
-  IN EVENT_PROVIDER  *This
   );
 
 // -----------------------------------------------------------------------------
@@ -157,6 +137,15 @@ StrAllocAppend (
 
 // -----------------------------------------------------------------------------
 /**
+ * Возвращает по хэндлу его более информативное описание.
+ * Не забыть освободить память из-под возвращаемого значения!
+*/
+CHAR16 *GetHandleName (
+  EFI_HANDLE Handle
+  );
+
+// -----------------------------------------------------------------------------
+/**
   Взято из ShellPkg, возвращает имя модуля для тех из них что входят в состав образа.
 
   Function to find the file name associated with a LoadedImageProtocol.
@@ -206,13 +195,6 @@ EventProvider_Construct(
 
   EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
 
-  Status = Vector_Construct (
-            &DataStruct->LoadedImageHandles,
-            sizeof(EFI_HANDLE),
-            64
-            );
-  RETURN_ON_ERR (Status)
-
   UINTN KnownProtocolCount = GetProtocolGuidCount();
 
   Status = Vector_Construct (
@@ -250,7 +232,6 @@ EventProvider_Destruct (
   if (This && This->Data) {
     EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
     Vector_Destruct (&DataStruct->EventHandles);
-    Vector_Destruct (&DataStruct->LoadedImageHandles);
     Vector_Destruct (&DataStruct->Contexts);
 
     gBS->FreePool (This->Data);
@@ -330,7 +311,6 @@ EventProvider_Stop (
 // -----------------------------------------------------------------------------
 /**
  * Создаёт по LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP для каждого образа, уже загруженного в момент нашего запуска.
- * Создаёт начальное состояние для EVENT_PROVIDER_DATA_STRUCT->LoadedImageHandles.
 */
 EFI_STATUS
 DetectImagesLoadedOnStartup (
@@ -341,7 +321,7 @@ DetectImagesLoadedOnStartup (
 
   EFI_STATUS  Status;
   UINTN       HandleCount;
-  EFI_HANDLE  *Handles = 0;
+  EFI_HANDLE  *Handles = NULL;
 
   // Ищем все протоколы gEfiLoadedImageProtocolGuid и логируем их.
   // Мы рассчитываем что в дальнейшем образы не будут выгружаться.
@@ -354,14 +334,8 @@ DetectImagesLoadedOnStartup (
                   );
   RETURN_ON_ERR (Status)
 
-  EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
-
   for (UINTN Index = 0; Index < HandleCount; ++Index) {
     DBG_INFO ("-- Detecting image %u/%u name...\n", (unsigned)(Index + 1), (unsigned)HandleCount);
-
-    // Сохраняем начальный слепок образов, загруженных до нас.
-    Status = Vector_PushBack (&DataStruct->LoadedImageHandles, &Handles[Index]);
-    RETURN_ON_ERR (Status)
 
     // Генерим событие.
     LOADING_EVENT Event;
@@ -418,36 +392,57 @@ CheckProtocolExistenceOnStartup (
   if (EFI_ERROR (Status)) {
     ImageNames = StrAllocCopy (L"<ERROR: can\t get handle buffer for protocol>");
   } else {
-    ImageNames = StrAllocCopy (L"{ ");
+    static CHAR16 Buffer[CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE];
+    UnicodeSPrint(Buffer, CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE * sizeof(CHAR16), L"[%3u] { ", (unsigned)HandleCount);
+    ImageNames = StrAllocCopy (L"");
+    StrAllocAppend(&ImageNames, Buffer);
 
+    BOOLEAN First = TRUE;
+
+    // Добавляем сначала образы.
+    // Попутно считаем, сколько у нас хэндлов не-образов.
     UINTN NotImageHandleCount = 0;
-
     for (UINTN Index = 0; Index < HandleCount; ++Index) {
-      CHAR16 *CurrentImageName = NULL;
-
       if (IsHandleImage (Handles[Index])) {
-        GetHandleImageName (
-          Handles[Index],
-          &CurrentImageName
-          );
-
-        StrAllocAppend(&ImageNames, CurrentImageName);
-
-        if (NotImageHandleCount || Index < HandleCount - 1) {
+        if (First) {
+          First = FALSE;
+        } else {
           StrAllocAppend(&ImageNames, L", ");
         }
-      } else {
-        NotImageHandleCount++;
-      }
 
-      SHELL_FREE_NON_NULL (CurrentImageName);
+        CHAR16 *CurrentImageName = GetHandleName (Handles[Index]);
+        StrAllocAppend(&ImageNames, CurrentImageName);
+        SHELL_FREE_NON_NULL (CurrentImageName);
+      } else
+      {
+         ++NotImageHandleCount;
+      }
     }
 
-    if (NotImageHandleCount) {
-      static CHAR16 Buffer[CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE];
-      UnicodeSPrint(Buffer, CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE * sizeof(CHAR16), L"[not images: %u]", (unsigned)NotImageHandleCount);
+    // Затем всё остальное:
+    if (NotImageHandleCount > 0) {
+      // Если были образы, то после них переводим на новую строку.
+      if (!First) {
+          StrAllocAppend(&ImageNames, L"; ");
+      }
 
+      UnicodeSPrint(Buffer, CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE * sizeof(CHAR16), L"not images (%u): ", (unsigned)NotImageHandleCount);
       StrAllocAppend(&ImageNames, Buffer);
+
+      First = TRUE;
+      for (UINTN Index = 0; Index < HandleCount; ++Index) {
+        if (!IsHandleImage (Handles[Index])) {
+          if (First) {
+            First = FALSE;
+          } else {
+            StrAllocAppend(&ImageNames, L", ");
+          }
+
+          CHAR16 *CurrentImageName = GetHandleName (Handles[Index]);
+          StrAllocAppend(&ImageNames, CurrentImageName);
+          SHELL_FREE_NON_NULL (CurrentImageName);
+        }
+      }
     }
 
     StrAllocAppend(&ImageNames, L" }");
@@ -479,13 +474,12 @@ SubscribeToProtocolInstallation (
 
   EFI_STATUS   Status;
   EFI_EVENT    EventProtocolAppeared;
-  VOID         *Registration;
 
   EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
   {
     NOTIFY_FUNCTION_CONTEXT Context;
-    Context.This = This;
-    Context.Guid = ProtocolGuid;
+    Context.This         = This;
+    Context.Guid         = ProtocolGuid;
 
     Status = Vector_PushBack (&DataStruct->Contexts, &Context);
     RETURN_ON_ERR (Status)
@@ -505,7 +499,7 @@ SubscribeToProtocolInstallation (
   Status = gBS->RegisterProtocolNotify (
                   ProtocolGuid,
                   EventProtocolAppeared,
-                  &Registration
+                  &ContextPointer->Registration
                   );
   RETURN_ON_ERR (Status)
 
@@ -532,165 +526,69 @@ ProtocolInstalledCallback (
   NOTIFY_FUNCTION_CONTEXT *ContextData = (NOTIFY_FUNCTION_CONTEXT *)Context;
   EVENT_PROVIDER *This = ContextData->This;
   EFI_GUID       *Guid = ContextData->Guid;
+  VOID           *Reg  = ContextData->Registration;
+
+  // Получаем хэндл, на который установлен протокол.
+  // LocateHandleBuffer () возвращает по одному хэндлу за раз,
+  // при этом нам нужен последний из них.
+  EFI_STATUS  Status;
+  UINTN       HandleCount    = 0;
+  EFI_HANDLE  *Handles       = NULL;
+  EFI_HANDLE  ProtocolHandle = NULL;
+
+  while (TRUE) {
+    Status = gBS->LocateHandleBuffer (
+                    ByRegisterNotify,
+                    NULL,
+                    Reg,
+                    &HandleCount,
+                    &Handles
+                    );
+    if (EFI_ERROR (Status)) {
+      break;
+    }
+
+    ProtocolHandle = *Handles;
+    SHELL_FREE_NON_NULL (Handles);
+  }
 
   LOADING_EVENT Event;
+  STATIC CHAR16 *Failed = L"<ERROR: can\'t get protocol handle>";
 
   if (CompareGuid (Guid, &gEfiLoadedImageProtocolGuid)) {
     Event.Type = LOG_ENTRY_TYPE_IMAGE_LOADED;
 
-    EFI_HANDLE *NewHandles = GetNewLoadedImageHandles(This);
-    if (NewHandles == NULL) {
+    if (ProtocolHandle == NULL) {
       // Ошибка во время детекта новых образов.
-      Event.ImageLoaded.ImageName       = StrAllocCopy (L"<ERROR: new images detecting error>");
+      Event.ImageLoaded.ImageName       = StrAllocCopy (Failed);
       Event.ImageLoaded.ParentImageName = NULL;
-
-    } else if (NewHandles[0] == NULL) {
-      // Не удалось найти кандидатов.
-      Event.ImageLoaded.ImageName = StrAllocCopy (L"<ERROR: no new images>");
-      Event.ImageLoaded.ParentImageName = NULL;
-
-    } else if (NewHandles[1] == NULL) {
-      // Только один кандидат.
+    } else if (ProtocolHandle == gImageHandle) {
+      // Не логируем событие загрузки собственного образа.
+      DBG_EXIT ();
+      return;
+    } else {
+      // Ок.
       GetHandleImageNameAndParentImageName (
-        NewHandles[0],
+        ProtocolHandle,
         &Event.ImageLoaded.ImageName,
         &Event.ImageLoaded.ParentImageName
         );
-
-    } else {
-      // Несколько кандидатов.
-      Event.ImageLoaded.ImageName       = StrAllocCopy (L"One of: | ");
-      Event.ImageLoaded.ParentImageName = StrAllocCopy (L"One of: | ");
-
-      for (UINTN Index = 0; NewHandles[Index] != NULL; ++Index) {
-        CHAR16 *CurrentImageName       = NULL;
-        CHAR16 *CurrentImageParentName = NULL;
-
-        GetHandleImageNameAndParentImageName (
-          NewHandles[Index],
-          &CurrentImageName,
-          &CurrentImageParentName
-          );
-
-        StrAllocAppend(&Event.ImageLoaded.ImageName,       CurrentImageName);
-        StrAllocAppend(&Event.ImageLoaded.ParentImageName, CurrentImageParentName);
-
-        StrAllocAppend(&Event.ImageLoaded.ImageName,       L" | ");
-        StrAllocAppend(&Event.ImageLoaded.ParentImageName, L" | ");
-
-        SHELL_FREE_NON_NULL (CurrentImageName);
-        SHELL_FREE_NON_NULL (CurrentImageParentName);
-      }
     }
-
-    SHELL_FREE_NON_NULL (NewHandles);
-  } else {
+  } else {  // <- if (CompareGuid (Guid, &gEfiLoadedImageProtocolGuid)) { ... }
     Event.Type                                      = LOG_ENTRY_TYPE_PROTOCOL_INSTALLED;
     Event.ProtocolInstalled.Guid                    = *Guid;
-    Event.ProtocolInstalled.ImageNameWhoInstalled   = NULL; // Данная реализация EventProvider не детектит это.
-    Event.ProtocolInstalled.ImageNameWhereInstalled = NULL; // Данная реализация EventProvider не детектит это.
     Event.ProtocolInstalled.Successful              = TRUE; // Если нас вызвали, то протокол успешно установлен.
+    Event.ProtocolInstalled.ImageNameWhoInstalled   = NULL; // Данная реализация EventProvider не детектит это.
+
+    if (ProtocolHandle == NULL) {
+      Event.ProtocolInstalled.ImageNameWhereInstalled = StrAllocCopy (Failed);
+    } else {
+      Event.ProtocolInstalled.ImageNameWhereInstalled = GetHandleName (ProtocolHandle);
+    }
   }
 
   This->AddEvent(This->ExternalData, &Event);
   DBG_EXIT ();
-}
-
-// -----------------------------------------------------------------------------
-/**
- * Возвращает список хэндлов исполняемых образов, установленных с момента прошлого вызова.
- * Пользователь должен освободить память под возвращаемый функцией массив.
- *
- * @retval NULL             Что-то пошло не так.
- * @return Массив, последний элемент которого NULL
-*/
-EFI_HANDLE *
-GetNewLoadedImageHandles (
-  IN EVENT_PROVIDER  *This
-  )
-{
-  DBG_ENTER ();
-
-  EFI_STATUS  Status;
-  UINTN       HandleCount;
-  EFI_HANDLE  *Handles = 0;
-
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gEfiLoadedImageProtocolGuid,
-                  NULL,
-                  &HandleCount,
-                  &Handles
-                  );
-  if (EFI_ERROR (Status)) {
-    DBG_EXIT_STATUS (Status);
-    return NULL;
-  }
-
-  EVENT_PROVIDER_DATA_STRUCT *DataStruct = (EVENT_PROVIDER_DATA_STRUCT *)This->Data;
-
-  // Сначала получаем количество новых хэндлов, имеющих установленный LoadedImageProtocol:
-  UINTN NewImageHandleCount = 0;
-
-  for (UINTN Index = 0; Index < HandleCount; ++Index) {
-
-    BOOLEAN HandleStored = FALSE;
-    FOR_EACH_VCT (EFI_HANDLE, StoredHandle, DataStruct->LoadedImageHandles) {
-      if (Handles[Index] == *StoredHandle) {
-        HandleStored = TRUE;
-        break;
-      }
-    }
-
-    if (!HandleStored) {
-      ++NewImageHandleCount;
-    }
-  }
-
-  // Затем выделяем память под количество новых хэндлов + 1 (для NULL):
-  EFI_HANDLE *NewHandles = NULL;
-  Status = gBS->AllocatePool (
-                  EfiBootServicesData,
-                  (NewImageHandleCount + 1) * sizeof(EFI_HANDLE),
-                  (VOID **)&NewHandles
-                  );
-  if (EFI_ERROR (Status)) {
-    SHELL_FREE_NON_NULL (Handles);
-    DBG_EXIT_STATUS (Status);
-    return NULL;
-  }
-
-  UINTN NewHandleIndex = 0;
-
-  // Сначала ищем количество новых хэндлов с LoadedImageProtocol:
-  for (UINTN Index = 0; Index < HandleCount; ++Index) {
-
-    BOOLEAN HandleStored = FALSE;
-    FOR_EACH_VCT (EFI_HANDLE, StoredHandle, DataStruct->LoadedImageHandles) {
-      if (Handles[Index] == *StoredHandle) {
-        HandleStored = TRUE;
-        break;
-      }
-    }
-
-    if (!HandleStored) {
-      // По идее, такого быть не должно. Но на всякий случай.
-      if (NewHandleIndex >= NewImageHandleCount) {
-        SHELL_FREE_NON_NULL (Handles);
-        DBG_EXIT_STATUS (EFI_BUFFER_TOO_SMALL);
-        return NULL;
-      }
-
-      // Сохраняем и туда и туда.
-      NewHandles[NewHandleIndex++] = Handles[Index];
-      Vector_PushBack (&DataStruct->LoadedImageHandles, &Handles[Index]);
-    }
-  }
-
-  NewHandles[NewHandleIndex] = NULL;
-  SHELL_FREE_NON_NULL (Handles);
-  DBG_EXIT_STATUS (EFI_SUCCESS);
-  return NewHandles;
 }
 
 // -----------------------------------------------------------------------------
@@ -888,6 +786,51 @@ StrAllocAppend (
   gBS->FreePool (*StrHead);
   *StrHead = NewStr;
   DBG_EXIT ();
+}
+
+// -----------------------------------------------------------------------------
+/**
+ * Возвращает по хэндлу его более информативное описание.
+ * Не забыть освободить память из-под возвращаемого значения!
+*/
+CHAR16 *GetHandleName (
+  EFI_HANDLE Handle
+  )
+{
+  static CHAR16 Buffer[GET_HANDLE_NAME_BUFFER_SIZE];
+
+  // Образ?
+  if (IsHandleImage (Handle)) {
+    CHAR16 *Str = NULL;
+    GetHandleImageName (
+      Handle,
+      &Str
+      );
+
+    return Str;
+  }
+
+  // Контроллер физического устройства?
+  EFI_STATUS Status;
+  EFI_DEVICE_PATH_PROTOCOL *DevPath;
+  Status = gBS->OpenProtocol (
+                  Handle,
+                  &gEfiDevicePathProtocolGuid,
+                  (VOID**)&DevPath,
+                  gImageHandle,
+                  NULL,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
+  if (!EFI_ERROR (Status)) {
+    CHAR16 *DevPathStr = ConvertDevicePathToText (DevPath, FALSE, FALSE);
+    UnicodeSPrint(Buffer, GET_HANDLE_NAME_BUFFER_SIZE * sizeof(CHAR16), L"[dev: %s]", DevPathStr);
+    gBS->FreePool (DevPathStr);
+    return StrAllocCopy (Buffer);
+  }
+
+  // Сервисный/етц.
+  UnicodeSPrint(Buffer, GET_HANDLE_NAME_BUFFER_SIZE * sizeof(CHAR16), L"[unk: %p]", Handle);
+  return StrAllocCopy (Buffer);
 }
 
 // -----------------------------------------------------------------------------
