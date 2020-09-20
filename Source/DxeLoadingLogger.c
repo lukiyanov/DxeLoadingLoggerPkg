@@ -214,11 +214,11 @@ AddNewEventToLog (
       }
 
       if (ImageNameWhere != NULL) {
-        PrintToFile (gLogFileProtocol, L" at: %-20s", ImageNameWhere);
+        PrintToFile (gLogFileProtocol, L" at: %-40s", ImageNameWhere);
       }
 
       if (ImageNameWho != NULL) {
-        PrintToFile (gLogFileProtocol, L" by: %-20s", ImageNameWho);
+        PrintToFile (gLogFileProtocol, L" by: %s", ImageNameWho);
       }
 
       PrintToFile (gLogFileProtocol, L"\r\n");
@@ -279,11 +279,11 @@ AddNewEventToLog (
       }
 
       if (ImageNameWhere != NULL) {
-        PrintToFile (gLogFileProtocol, L" at: %-20s", ImageNameWhere);
+        PrintToFile (gLogFileProtocol, L" at: %-40s", ImageNameWhere);
       }
 
       if (ImageNameWho != NULL) {
-        PrintToFile (gLogFileProtocol, L" by: %-20s", ImageNameWho);
+        PrintToFile (gLogFileProtocol, L" by: %s", ImageNameWho);
       }
 
       PrintToFile (gLogFileProtocol, L"\r\n");
