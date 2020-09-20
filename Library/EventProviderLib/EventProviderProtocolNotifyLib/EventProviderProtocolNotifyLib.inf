@@ -24,7 +24,9 @@
   VectorLib
   ProtocolGuidDatabaseLib
   CommonMacrosLib
+  HandleDatabaseDumpLib
 
 [Protocols]
   gEfiLoadedImageProtocolGuid
   gEfiFirmwareVolume2ProtocolGuid
+  gEfiDevicePathProtocolGuid

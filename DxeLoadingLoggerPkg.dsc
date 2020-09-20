@@ -93,6 +93,7 @@
   CommonMacrosLib             | DxeLoadingLoggerPkg/Library/CommonMacrosLib/CommonMacrosLib.inf
   LoadingEventLib             | DxeLoadingLoggerPkg/Library/LoadingEventLib/LoadingEventLib.inf
   TextAnimationLib            | DxeLoadingLoggerPkg/Library/TextAnimationLib/TextAnimationLib.inf
+  HandleDatabaseDumpLib       | DxeLoadingLoggerPkg/Library/HandleDatabaseDumpLib/HandleDatabaseDumpLib.inf
 
 !if $(EVENT_PROVIDER_GST_HOOK)
   EventProviderLib            | DxeLoadingLoggerPkg/Library/EventProviderLib/EventProviderSystemTableHookLib/EventProviderSystemTableHookLib.inf
