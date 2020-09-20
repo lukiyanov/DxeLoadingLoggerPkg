@@ -511,13 +511,11 @@ ProtocolInstalledCallback (
   // LocateHandleBuffer () возвращает по одному хэндлу за раз,
   // при этом нам нужен последний из них.
   EFI_STATUS  Status;
-  UINTN       HandleCount     = 0;
-  EFI_HANDLE  *Handles        = NULL;
-  EFI_HANDLE  *ProtocolHandle = NULL;
+  UINTN       HandleCount    = 0;
+  EFI_HANDLE  *Handles       = NULL;
+  EFI_HANDLE  ProtocolHandle = NULL;
 
   while (TRUE) {
-    ProtocolHandle = Handles;
-
     Status = gBS->LocateHandleBuffer (
                     ByRegisterNotify,
                     NULL,
@@ -528,6 +526,9 @@ ProtocolInstalledCallback (
     if (EFI_ERROR (Status)) {
       break;
     }
+
+    ProtocolHandle = *Handles;
+    SHELL_FREE_NON_NULL (Handles);
   }
 
   LOADING_EVENT Event;
@@ -543,7 +544,7 @@ ProtocolInstalledCallback (
     } else {
       // Ок.
       GetHandleImageNameAndParentImageName (
-        *ProtocolHandle,
+        ProtocolHandle,
         &Event.ImageLoaded.ImageName,
         &Event.ImageLoaded.ParentImageName
         );
@@ -557,12 +558,11 @@ ProtocolInstalledCallback (
     if (ProtocolHandle == NULL) {
       Event.ProtocolInstalled.ImageNameWhereInstalled = StrAllocCopy (Failed);
     } else {
-      Event.ProtocolInstalled.ImageNameWhereInstalled = GetHandleName (*ProtocolHandle);
+      Event.ProtocolInstalled.ImageNameWhereInstalled = GetHandleName (ProtocolHandle);
     }
   }
 
   This->AddEvent(This->ExternalData, &Event);
-  SHELL_FREE_NON_NULL (Handles);
   DBG_EXIT ();
 }
 
