@@ -392,36 +392,57 @@ CheckProtocolExistenceOnStartup (
   if (EFI_ERROR (Status)) {
     ImageNames = StrAllocCopy (L"<ERROR: can\t get handle buffer for protocol>");
   } else {
-    ImageNames = StrAllocCopy (L"{ ");
+    static CHAR16 Buffer[CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE];
+    UnicodeSPrint(Buffer, CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE * sizeof(CHAR16), L"[%3u] { ", (unsigned)HandleCount);
+    ImageNames = StrAllocCopy (L"");
+    StrAllocAppend(&ImageNames, Buffer);
 
+    BOOLEAN First = TRUE;
+
+    // Добавляем сначала образы.
+    // Попутно считаем, сколько у нас хэндлов не-образов.
     UINTN NotImageHandleCount = 0;
-
     for (UINTN Index = 0; Index < HandleCount; ++Index) {
-      CHAR16 *CurrentImageName = NULL;
-
       if (IsHandleImage (Handles[Index])) {
-        GetHandleImageName (
-          Handles[Index],
-          &CurrentImageName
-          );
-
-        StrAllocAppend(&ImageNames, CurrentImageName);
-
-        if (NotImageHandleCount || Index < HandleCount - 1) {
+        if (First) {
+          First = FALSE;
+        } else {
           StrAllocAppend(&ImageNames, L", ");
         }
-      } else {
-        NotImageHandleCount++;
-      }
 
-      SHELL_FREE_NON_NULL (CurrentImageName);
+        CHAR16 *CurrentImageName = GetHandleName (Handles[Index]);
+        StrAllocAppend(&ImageNames, CurrentImageName);
+        SHELL_FREE_NON_NULL (CurrentImageName);
+      } else
+      {
+         ++NotImageHandleCount;
+      }
     }
 
-    if (NotImageHandleCount) {
-      static CHAR16 Buffer[CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE];
-      UnicodeSPrint(Buffer, CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE * sizeof(CHAR16), L"[not images: %u]", (unsigned)NotImageHandleCount);
+    // Затем всё остальное:
+    if (NotImageHandleCount > 0) {
+      // Если были образы, то после них переводим на новую строку.
+      if (!First) {
+          StrAllocAppend(&ImageNames, L"; ");
+      }
 
+      UnicodeSPrint(Buffer, CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE * sizeof(CHAR16), L"not images (%u): ", (unsigned)NotImageHandleCount);
       StrAllocAppend(&ImageNames, Buffer);
+
+      First = TRUE;
+      for (UINTN Index = 0; Index < HandleCount; ++Index) {
+        if (!IsHandleImage (Handles[Index])) {
+          if (First) {
+            First = FALSE;
+          } else {
+            StrAllocAppend(&ImageNames, L", ");
+          }
+
+          CHAR16 *CurrentImageName = GetHandleName (Handles[Index]);
+          StrAllocAppend(&ImageNames, CurrentImageName);
+          SHELL_FREE_NON_NULL (CurrentImageName);
+        }
+      }
     }
 
     StrAllocAppend(&ImageNames, L" }");
@@ -786,9 +807,7 @@ CHAR16 *GetHandleName (
       &Str
       );
 
-    UnicodeSPrint(Buffer, GET_HANDLE_NAME_BUFFER_SIZE * sizeof(CHAR16), L"[img: %s]", Str);
-    gBS->FreePool (Str);
-    return StrAllocCopy (Buffer);
+    return Str;
   }
 
   // Контроллер физического устройства?
