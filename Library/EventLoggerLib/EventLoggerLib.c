@@ -144,7 +144,6 @@ AddEventToLog (
   DBG_ENTER ();
   EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
 
-  static UINTN EventCount;
   LOGGER *This = (LOGGER *)Logger;
 
   Vector_PushBack (&This->LogData, Event);
@@ -159,7 +158,7 @@ AddEventToLog (
     if (gST->ConOut
       && Event->Type != LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP
       && Event->Type != LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP) {
-        Print(L"---- [event #%u] ----\n", (unsigned)++EventCount);
+        Print(L"---- [event #%u] ----\n", (unsigned) Vector_Size (&This->LogData));
     }
   }
 
