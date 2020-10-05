@@ -304,7 +304,7 @@ EFIAPI MyInstallProtocolInterface (
   IN     VOID                     *Interface
   )
 {
-  if (FeaturePcdGet (PcdBdsEntryHookEnabled) && IsBdsArchProtocolGuidAndWeMustSubstituteIt (Protocol)) {
+  if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (Protocol)) {
     gOriginalBdsArchProtocol = Interface;
     Interface = &gMyBdsArchProtocol;
   }
