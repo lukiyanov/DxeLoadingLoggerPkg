@@ -281,6 +281,8 @@ EventProvider_Stop (
     gST->BootServices->UninstallMultipleProtocolInterfaces = gOriginalUninstallMultipleProtocolInterfaces;
 
     CalculateEfiHdrCrc (&gST->BootServices->Hdr);
+
+    // TODO: если мы подменили EFI_BDS_ARCH_PROTOCOL, восстановить.
   }
   gBS->RestoreTPL (PreviousTpl);
 
