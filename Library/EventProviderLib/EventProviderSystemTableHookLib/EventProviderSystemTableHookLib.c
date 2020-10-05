@@ -8,79 +8,79 @@
 
 // Более 35 интерфейсов за раз будут устанавливать только совсем отбитые разрабы, большее количество не поддерживаем.
 // Возможно, в далёком и светлом будущем способ форвардинга аргументов будет заменён на более универсальный.
-#define ARRAY_ARG_LENGTH 70
+#define ARG_ARRAY_ELEMENT_COUNT 70
 
-#define ARRAY_ARGS(Pairs) \
-  Pairs[0],  \
-  Pairs[1],  \
-  Pairs[2],  \
-  Pairs[3],  \
-  Pairs[4],  \
-  Pairs[5],  \
-  Pairs[6],  \
-  Pairs[7],  \
-  Pairs[8],  \
-  Pairs[9],  \
-  Pairs[10], \
-  Pairs[11], \
-  Pairs[12], \
-  Pairs[13], \
-  Pairs[14], \
-  Pairs[15], \
-  Pairs[16], \
-  Pairs[17], \
-  Pairs[18], \
-  Pairs[19], \
-  Pairs[20], \
-  Pairs[21], \
-  Pairs[22], \
-  Pairs[23], \
-  Pairs[24], \
-  Pairs[25], \
-  Pairs[26], \
-  Pairs[27], \
-  Pairs[28], \
-  Pairs[29], \
-  Pairs[30], \
-  Pairs[31], \
-  Pairs[32], \
-  Pairs[33], \
-  Pairs[34], \
-  Pairs[35], \
-  Pairs[36], \
-  Pairs[37], \
-  Pairs[38], \
-  Pairs[39], \
-  Pairs[40], \
-  Pairs[41], \
-  Pairs[42], \
-  Pairs[43], \
-  Pairs[44], \
-  Pairs[45], \
-  Pairs[46], \
-  Pairs[47], \
-  Pairs[48], \
-  Pairs[49], \
-  Pairs[50], \
-  Pairs[51], \
-  Pairs[52], \
-  Pairs[53], \
-  Pairs[54], \
-  Pairs[55], \
-  Pairs[56], \
-  Pairs[57], \
-  Pairs[58], \
-  Pairs[59], \
-  Pairs[60], \
-  Pairs[61], \
-  Pairs[62], \
-  Pairs[63], \
-  Pairs[64], \
-  Pairs[65], \
-  Pairs[66], \
-  Pairs[67], \
-  Pairs[68], \
-  Pairs[69]
+#define ARG_ARRAY_ALL_ELEMENTS(Array) \
+  Array[0],  \
+  Array[1],  \
+  Array[2],  \
+  Array[3],  \
+  Array[4],  \
+  Array[5],  \
+  Array[6],  \
+  Array[7],  \
+  Array[8],  \
+  Array[9],  \
+  Array[10], \
+  Array[11], \
+  Array[12], \
+  Array[13], \
+  Array[14], \
+  Array[15], \
+  Array[16], \
+  Array[17], \
+  Array[18], \
+  Array[19], \
+  Array[20], \
+  Array[21], \
+  Array[22], \
+  Array[23], \
+  Array[24], \
+  Array[25], \
+  Array[26], \
+  Array[27], \
+  Array[28], \
+  Array[29], \
+  Array[30], \
+  Array[31], \
+  Array[32], \
+  Array[33], \
+  Array[34], \
+  Array[35], \
+  Array[36], \
+  Array[37], \
+  Array[38], \
+  Array[39], \
+  Array[40], \
+  Array[41], \
+  Array[42], \
+  Array[43], \
+  Array[44], \
+  Array[45], \
+  Array[46], \
+  Array[47], \
+  Array[48], \
+  Array[49], \
+  Array[50], \
+  Array[51], \
+  Array[52], \
+  Array[53], \
+  Array[54], \
+  Array[55], \
+  Array[56], \
+  Array[57], \
+  Array[58], \
+  Array[59], \
+  Array[60], \
+  Array[61], \
+  Array[62], \
+  Array[63], \
+  Array[64], \
+  Array[65], \
+  Array[66], \
+  Array[67], \
+  Array[68], \
+  Array[69]
 
 // -----------------------------------------------------------------------------
 // Хук на переход в BDS.
@@ -144,7 +144,10 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
 /**
  * TRUE, если это EFI_BDS_ARCH_PROTOCOL_GUID.
 */
-BOOLEAN IsBdsArchProtocolGuidAndWeMustSubstituteIt(VOID *Guid);
+BOOLEAN
+IsBdsArchProtocolGuidAndWeMustSubstituteIt (
+  VOID *Guid
+  );
 
 // -----------------------------------------------------------------------------
 /**
@@ -224,6 +227,8 @@ EventProvider_Start (
   IN OUT  EVENT_PROVIDER  *This
   )
 {
+  DBG_ENTER ();
+
   if (This == NULL || This->Data == NULL) {
     DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
     return EFI_INVALID_PARAMETER;
@@ -288,11 +293,15 @@ EFIAPI MyBdsArchProtocolEntry (
   IN EFI_BDS_ARCH_PROTOCOL  *This
   )
 {
+  DBG_ENTER ();
+
   // TODO: BEFORE
 
   gOriginalBdsArchProtocol->Entry(This);
 
   // TODO: AFTER
+
+  DBG_EXIT ();
 }
 
 // -----------------------------------------------------------------------------
@@ -304,6 +313,8 @@ EFIAPI MyInstallProtocolInterface (
   IN     VOID                     *Interface
   )
 {
+  DBG_ENTER ();
+
   if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (Protocol)) {
     gOriginalBdsArchProtocol = Interface;
     Interface = &gMyBdsArchProtocol;
@@ -311,6 +322,8 @@ EFIAPI MyInstallProtocolInterface (
 
   EFI_STATUS Status = gOriginalInstallProtocolInterface (Handle, Protocol, InterfaceType, Interface);
   // TODO: ...
+
+  DBG_EXIT_STATUS (Status);
   return Status;
 }
 
@@ -323,6 +336,8 @@ EFIAPI MyReinstallProtocolInterface (
   IN VOID                     *NewInterface
   )
 {
+  DBG_ENTER ();
+
   if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (Protocol)) {
     gOriginalBdsArchProtocol = NewInterface;
     OldInterface = &gMyBdsArchProtocol;
@@ -331,6 +346,8 @@ EFIAPI MyReinstallProtocolInterface (
 
   EFI_STATUS Status = gOriginalReinstallProtocolInterface (Handle, Protocol, OldInterface, NewInterface);
   // TODO: ...
+
+  DBG_EXIT_STATUS (Status);
   return Status;
 }
 
@@ -342,12 +359,16 @@ EFIAPI MyUninstallProtocolInterface (
   IN VOID                     *Interface
   )
 {
+  DBG_ENTER ();
+
   if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (Protocol)) {
     Interface = &gMyBdsArchProtocol;
   }
 
   EFI_STATUS Status = gOriginalUninstallProtocolInterface (Handle, Protocol, Interface);
   // TODO: ...
+
+  DBG_EXIT_STATUS (Status);
   return Status;
 }
 
@@ -358,7 +379,9 @@ EFIAPI MyInstallMultipleProtocolInterfaces (
   ...
   )
 {
-  VOID* FunctionArgList[ARRAY_ARG_LENGTH];
+  DBG_ENTER ();
+
+  VOID* FunctionArgList[ARG_ARRAY_ELEMENT_COUNT];
   UINTN FunctionArgCount = 0;
   ZeroMem (FunctionArgList, sizeof (FunctionArgList));
 
@@ -367,7 +390,7 @@ EFIAPI MyInstallMultipleProtocolInterfaces (
   {
     // Аргументы идут по 2, если первый из них NULL - конец.
     while (TRUE) {
-      if (FunctionArgCount == ARRAY_ARG_LENGTH) {
+      if (FunctionArgCount == ARG_ARRAY_ELEMENT_COUNT) {
         // Большее количество не поддерживем, это бессмысленно.
 
         // TODO: добавить событие "Ошибка" в этом случае.
@@ -392,8 +415,10 @@ EFIAPI MyInstallMultipleProtocolInterfaces (
   }
   VA_END (VaList);
 
-  EFI_STATUS Status = gOriginalInstallMultipleProtocolInterfaces(Handle, ARRAY_ARGS(FunctionArgList), NULL);
+  EFI_STATUS Status = gOriginalInstallMultipleProtocolInterfaces (Handle, ARG_ARRAY_ALL_ELEMENTS(FunctionArgList), NULL);
   // TODO: ...
+
+  DBG_EXIT_STATUS (Status);
   return Status;
 }
 
@@ -404,7 +429,9 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
   ...
   )
 {
-  VOID* FunctionArgList[ARRAY_ARG_LENGTH];
+  DBG_ENTER ();
+
+  VOID* FunctionArgList[ARG_ARRAY_ELEMENT_COUNT];
   UINTN FunctionArgCount = 0;
   ZeroMem (FunctionArgList, sizeof (FunctionArgList));
 
@@ -413,7 +440,7 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
   {
     // Аргументы идут по 2, если первый из них NULL - конец.
     while (TRUE) {
-      if (FunctionArgCount == ARRAY_ARG_LENGTH) {
+      if (FunctionArgCount == ARG_ARRAY_ELEMENT_COUNT) {
         // Большее количество не поддерживем, это бессмысленно.
 
         // TODO: добавить событие "Ошибка" в этом случае.
@@ -437,13 +464,18 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
   }
   VA_END (VaList);
 
-  EFI_STATUS Status = gOriginalUninstallMultipleProtocolInterfaces(Handle, ARRAY_ARGS(FunctionArgList), NULL);
+  EFI_STATUS Status = gOriginalUninstallMultipleProtocolInterfaces (Handle, ARG_ARRAY_ALL_ELEMENTS(FunctionArgList), NULL);
   // TODO: ...
+
+  DBG_EXIT_STATUS (Status);
   return Status;
 }
 
 // -----------------------------------------------------------------------------
-BOOLEAN IsBdsArchProtocolGuidAndWeMustSubstituteIt(VOID *Guid)
+BOOLEAN
+IsBdsArchProtocolGuidAndWeMustSubstituteIt (
+  VOID *Guid
+  )
 {
   if (FeaturePcdGet (PcdBdsEntryHookEnabled)) {
     return CompareGuid ((EFI_GUID *)Guid, &gEfiBdsArchProtocolGuid);
