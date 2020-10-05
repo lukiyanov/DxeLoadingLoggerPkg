@@ -5,6 +5,82 @@
 #include <Library/CommonMacrosLib.h>
 #include <Protocol/Bds.h>
 
+// Более 35 интерфейсов за раз будут устанавливать только совсем отбитые разрабы, большее количество не поддерживаем.
+// Возможно, в далёком и светлом будущем способ форвардинга аргументов будет заменён на более универсальный.
+#define ARRAY_ARG_LENGTH 70
+
+#define ARRAY_ARGS(Pairs) \
+  Pairs[0],  \
+  Pairs[1],  \
+  Pairs[2],  \
+  Pairs[3],  \
+  Pairs[4],  \
+  Pairs[5],  \
+  Pairs[6],  \
+  Pairs[7],  \
+  Pairs[8],  \
+  Pairs[9],  \
+  Pairs[10], \
+  Pairs[11], \
+  Pairs[12], \
+  Pairs[13], \
+  Pairs[14], \
+  Pairs[15], \
+  Pairs[16], \
+  Pairs[17], \
+  Pairs[18], \
+  Pairs[19], \
+  Pairs[20], \
+  Pairs[21], \
+  Pairs[22], \
+  Pairs[23], \
+  Pairs[24], \
+  Pairs[25], \
+  Pairs[26], \
+  Pairs[27], \
+  Pairs[28], \
+  Pairs[29], \
+  Pairs[30], \
+  Pairs[31], \
+  Pairs[32], \
+  Pairs[33], \
+  Pairs[34], \
+  Pairs[35], \
+  Pairs[36], \
+  Pairs[37], \
+  Pairs[38], \
+  Pairs[39], \
+  Pairs[40], \
+  Pairs[41], \
+  Pairs[42], \
+  Pairs[43], \
+  Pairs[44], \
+  Pairs[45], \
+  Pairs[46], \
+  Pairs[47], \
+  Pairs[48], \
+  Pairs[49], \
+  Pairs[50], \
+  Pairs[51], \
+  Pairs[52], \
+  Pairs[53], \
+  Pairs[54], \
+  Pairs[55], \
+  Pairs[56], \
+  Pairs[57], \
+  Pairs[58], \
+  Pairs[59], \
+  Pairs[60], \
+  Pairs[61], \
+  Pairs[62], \
+  Pairs[63], \
+  Pairs[64], \
+  Pairs[65], \
+  Pairs[66], \
+  Pairs[67], \
+  Pairs[68], \
+  Pairs[69]
+
 // -----------------------------------------------------------------------------
 // Хук на переход в BDS.
 VOID
@@ -112,8 +188,9 @@ EventProvider_Construct(
 
   This->AddEvent     = AddEvent;
   This->ExternalData = ExternalData;
-  This->Data         = NULL;         // Не используем.
+  This->Data         = NULL;
 
+  DBG_EXIT_STATUS (EFI_SUCCESS);
   return EFI_SUCCESS;
 }
 
@@ -168,6 +245,9 @@ EventProvider_Start (
     CalculateEfiHdrCrc (&gST->BootServices->Hdr);
   }
   gBS->RestoreTPL (PreviousTpl);
+
+  DBG_EXIT_STATUS (EFI_SUCCESS);
+  return EFI_SUCCESS;
 }
 
 // -----------------------------------------------------------------------------
@@ -223,7 +303,14 @@ EFIAPI MyInstallProtocolInterface (
   IN     VOID                     *Interface
   )
 {
-  ;  // TODO
+  if (IsBdsArchProtocolGuid (Protocol)) {
+    gOriginalBdsArchProtocol = Interface;
+    Interface = &gMyBdsArchProtocol;
+  }
+
+  EFI_STATUS Status = gOriginalInstallProtocolInterface (Handle, Protocol, InterfaceType, Interface);
+  // TODO: ...
+  return Status;
 }
 
 // -----------------------------------------------------------------------------
@@ -235,7 +322,14 @@ EFIAPI MyReinstallProtocolInterface (
   IN VOID                     *NewInterface
   )
 {
-  ;  // TODO
+  if (IsBdsArchProtocolGuid (Protocol)) {
+    gOriginalBdsArchProtocol = NewInterface;
+    NewInterface = &gMyBdsArchProtocol;
+  }
+
+  EFI_STATUS Status = gOriginalReinstallProtocolInterface (Handle, Protocol, OldInterface, NewInterface);
+  // TODO: ...
+  return Status;
 }
 
 // -----------------------------------------------------------------------------
@@ -246,7 +340,13 @@ EFIAPI MyUninstallProtocolInterface (
   IN VOID                     *Interface
   )
 {
-  ;  // TODO
+  if (IsBdsArchProtocolGuid (Protocol)) {
+    Interface = &gMyBdsArchProtocol;
+  }
+
+  EFI_STATUS Status = gOriginalUninstallProtocolInterface (Handle, Protocol, Interface);
+  // TODO: ...
+  return Status;
 }
 
 // -----------------------------------------------------------------------------
@@ -256,7 +356,43 @@ EFIAPI MyInstallMultipleProtocolInterfaces (
   ...
   )
 {
-  ;  // TODO
+  VOID* FunctionArgList[ARRAY_ARG_LENGTH];
+  UINTN FunctionArgCount = 0;
+  ZeroMem (FunctionArgList, sizeof (FunctionArgList));
+
+  VA_LIST VaList;
+  VA_START (VaList, Handle);
+  {
+    // Аргументы идут по 2, если первый из них NULL - конец.
+    while (TRUE) {
+      if (FunctionArgCount == ARRAY_ARG_LENGTH) {
+        // Большее количество не поддерживем, это бессмысленно.
+
+        // TODO: добавить событие "Ошибка" в этом случае.
+        break;
+      }
+
+      VOID *ArgInterfaceGuid = VA_ARG (VaList, VOID*);
+      if (ArgInterfaceGuid == NULL) {
+        break;
+      }
+
+      VOID *ArgInterfaceStruct = VA_ARG (VaList, VOID*);
+
+      if (IsBdsArchProtocolGuid (ArgInterfaceGuid)) {
+        gOriginalBdsArchProtocol = ArgInterfaceStruct;
+        ArgInterfaceStruct = &gMyBdsArchProtocol;
+      }
+
+      FunctionArgList[FunctionArgCount++] = ArgInterfaceGuid;
+      FunctionArgList[FunctionArgCount++] = ArgInterfaceStruct;
+    }
+  }
+  VA_END (VaList);
+
+  EFI_STATUS Status = gOriginalInstallMultipleProtocolInterfaces(Handle, ARRAY_ARGS(FunctionArgList), NULL);
+  // TODO: ...
+  return Status;
 }
 
 // -----------------------------------------------------------------------------
@@ -266,7 +402,42 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
   ...
   )
 {
-  ;  // TODO
+  VOID* FunctionArgList[ARRAY_ARG_LENGTH];
+  UINTN FunctionArgCount = 0;
+  ZeroMem (FunctionArgList, sizeof (FunctionArgList));
+
+  VA_LIST VaList;
+  VA_START (VaList, Handle);
+  {
+    // Аргументы идут по 2, если первый из них NULL - конец.
+    while (TRUE) {
+      if (FunctionArgCount == ARRAY_ARG_LENGTH) {
+        // Большее количество не поддерживем, это бессмысленно.
+
+        // TODO: добавить событие "Ошибка" в этом случае.
+        break;
+      }
+
+      VOID *ArgInterfaceGuid = VA_ARG (VaList, VOID*);
+      if (ArgInterfaceGuid == NULL) {
+        break;
+      }
+
+      VOID *ArgInterfaceStruct = VA_ARG (VaList, VOID*);
+
+      if (IsBdsArchProtocolGuid (ArgInterfaceGuid)) {
+        ArgInterfaceStruct = &gMyBdsArchProtocol;
+      }
+
+      FunctionArgList[FunctionArgCount++] = ArgInterfaceGuid;
+      FunctionArgList[FunctionArgCount++] = ArgInterfaceStruct;
+    }
+  }
+  VA_END (VaList);
+
+  EFI_STATUS Status = gOriginalUninstallMultipleProtocolInterfaces(Handle, ARRAY_ARGS(FunctionArgList), NULL);
+  // TODO: ...
+  return Status;
 }
 
 // -----------------------------------------------------------------------------
