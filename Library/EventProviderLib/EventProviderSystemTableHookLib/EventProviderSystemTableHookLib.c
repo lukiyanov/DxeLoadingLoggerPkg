@@ -142,7 +142,7 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
 
 // -----------------------------------------------------------------------------
 /**
- * TRUE, если это EFI_BDS_ARCH_PROTOCOL_GUID.
+ * TRUE, если это EFI_BDS_ARCH_PROTOCOL_GUID и мы должны его подменить.
 */
 BOOLEAN
 IsBdsArchProtocolGuidAndWeMustSubstituteIt (
@@ -229,7 +229,7 @@ EventProvider_Start (
 {
   DBG_ENTER ();
 
-  if (This == NULL || This->Data == NULL) {
+  if (This == NULL) {
     DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
     return EFI_INVALID_PARAMETER;
   }
@@ -267,7 +267,7 @@ EventProvider_Stop (
 {
   DBG_ENTER ();
 
-  if (This == NULL || This->Data == NULL) {
+  if (This == NULL) {
     DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
     return;
   }
