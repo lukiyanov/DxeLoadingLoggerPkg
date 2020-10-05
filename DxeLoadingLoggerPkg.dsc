@@ -16,12 +16,17 @@
   # TRUE:
   #        События собираются путём модификации gST.
   #        Этот подход даёт больше информации, но системная прошивка может сопротивляться данному методу.
-  #
   # FALSE:
   #        События собираются посредством вызова RegisterProtocolNotify() для известных протоколов.
-  #        Гарантированно совместим со всеми прошивками, но даёт гораздо меньше информации.
+  #        Лучшая совместимость с прошивками, но даёт меньше информации.
   #
   DEFINE EVENT_PROVIDER_GST_HOOK = TRUE
+
+  #
+  # Перехватывать переход на BDS-стадию.
+  # Актуально только для EVENT_PROVIDER_GST_HOOK = TRUE, иначе ни на что не влияет.
+  #
+  DEFINE DETECT_BDS_STAGE_ENTRY = TRUE
 
   #
   # Выводить номера событий в консоль.
@@ -112,4 +117,5 @@
 
 [PcdsFeatureFlag]
   gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole | $(PRINT_EVENT_NUMBERS_TO_CONSOLE)
+  gDxeLoadingLoggerSpaceGuid.PcdBdsEntryHookEnabled        | $(DETECT_BDS_STAGE_ENTRY)
   gDxeLoadingLoggerSpaceGuid.PcdDebugMacrosOutputEnabled   | $(DEBUG_MACROS_OUTPUT_ON)

@@ -1,6 +1,7 @@
 #include <Uefi.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/PcdLib.h>
 #include <Library/EventProviderLib.h>
 #include <Library/CommonMacrosLib.h>
 #include <Protocol/Bds.h>
@@ -88,8 +89,8 @@ EFIAPI MyBdsArchProtocolEntry (
   IN EFI_BDS_ARCH_PROTOCOL  *This
   );
 
-static EFI_BDS_ARCH_PROTOCOL gMyBdsArchProtocol = { &MyBdsArchProtocolEntry };
-static EFI_BDS_ARCH_PROTOCOL *gOriginalBdsArchProtocol = NULL;
+static GLOBAL_REMOVE_IF_UNREFERENCED EFI_BDS_ARCH_PROTOCOL gMyBdsArchProtocol = { &MyBdsArchProtocolEntry };
+static GLOBAL_REMOVE_IF_UNREFERENCED EFI_BDS_ARCH_PROTOCOL *gOriginalBdsArchProtocol = NULL;
 
 
 // -----------------------------------------------------------------------------
@@ -143,7 +144,7 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
 /**
  * TRUE, если это EFI_BDS_ARCH_PROTOCOL_GUID.
 */
-BOOLEAN IsBdsArchProtocolGuid(VOID *Guid);
+BOOLEAN IsBdsArchProtocolGuidAndWeMustSubstituteIt(VOID *Guid);
 
 // -----------------------------------------------------------------------------
 /**
@@ -303,7 +304,7 @@ EFIAPI MyInstallProtocolInterface (
   IN     VOID                     *Interface
   )
 {
-  if (IsBdsArchProtocolGuid (Protocol)) {
+  if (FeaturePcdGet (PcdBdsEntryHookEnabled) && IsBdsArchProtocolGuidAndWeMustSubstituteIt (Protocol)) {
     gOriginalBdsArchProtocol = Interface;
     Interface = &gMyBdsArchProtocol;
   }
@@ -322,7 +323,7 @@ EFIAPI MyReinstallProtocolInterface (
   IN VOID                     *NewInterface
   )
 {
-  if (IsBdsArchProtocolGuid (Protocol)) {
+  if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (Protocol)) {
     gOriginalBdsArchProtocol = NewInterface;
     OldInterface = &gMyBdsArchProtocol;
     NewInterface = &gMyBdsArchProtocol;
@@ -341,7 +342,7 @@ EFIAPI MyUninstallProtocolInterface (
   IN VOID                     *Interface
   )
 {
-  if (IsBdsArchProtocolGuid (Protocol)) {
+  if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (Protocol)) {
     Interface = &gMyBdsArchProtocol;
   }
 
@@ -380,7 +381,7 @@ EFIAPI MyInstallMultipleProtocolInterfaces (
 
       VOID *ArgInterfaceStruct = VA_ARG (VaList, VOID*);
 
-      if (IsBdsArchProtocolGuid (ArgInterfaceGuid)) {
+      if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (ArgInterfaceGuid)) {
         gOriginalBdsArchProtocol = ArgInterfaceStruct;
         ArgInterfaceStruct = &gMyBdsArchProtocol;
       }
@@ -426,7 +427,7 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
 
       VOID *ArgInterfaceStruct = VA_ARG (VaList, VOID*);
 
-      if (IsBdsArchProtocolGuid (ArgInterfaceGuid)) {
+      if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (ArgInterfaceGuid)) {
         ArgInterfaceStruct = &gMyBdsArchProtocol;
       }
 
@@ -442,9 +443,13 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
 }
 
 // -----------------------------------------------------------------------------
-BOOLEAN IsBdsArchProtocolGuid(VOID *Guid)
+BOOLEAN IsBdsArchProtocolGuidAndWeMustSubstituteIt(VOID *Guid)
 {
-  return CompareGuid ((EFI_GUID *)Guid, &gEfiBdsArchProtocolGuid);
+  if (FeaturePcdGet (PcdBdsEntryHookEnabled)) {
+    return CompareGuid ((EFI_GUID *)Guid, &gEfiBdsArchProtocolGuid);
+  } else {
+    return FALSE;
+  }
 }
 
 // -----------------------------------------------------------------------------
