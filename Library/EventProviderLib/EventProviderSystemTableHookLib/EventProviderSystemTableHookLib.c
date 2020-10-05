@@ -142,7 +142,7 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
 
 // -----------------------------------------------------------------------------
 /**
- * TRUE, если это EFI_BDS_ARCH_PROTOCOL_GUID и мы должны его подменить.
+ * TRUE, если это EFI_BDS_ARCH_PROTOCOL_GUID и мы должны подменить его реализацию.
 */
 BOOLEAN
 IsBdsArchProtocolGuidAndWeMustSubstituteIt (
