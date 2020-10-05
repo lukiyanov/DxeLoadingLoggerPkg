@@ -17,6 +17,7 @@
   UefiBootServicesTableLib
   BaseLib
   BaseMemoryLib
+  PcdLib
   #UefiLib
   #PrintLib
   #DevicePathLib
@@ -28,3 +29,6 @@
 
 [Protocols]
   gEfiBdsArchProtocolGuid
+
+[FeaturePcd]
+  gDxeLoadingLoggerSpaceGuid.PcdBdsEntryHookEnabled
