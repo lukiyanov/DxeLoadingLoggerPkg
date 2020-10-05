@@ -1,0 +1,30 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = EventProviderSystemTableHookLib
+  FILE_GUID                      = 7C13B482-68BC-49FE-B82E-49B7CDE0237F
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = EventProviderLib | DXE_DRIVER UEFI_APPLICATION UEFI_DRIVER
+
+[Sources]
+  EventProviderSystemTableHookLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  BaseLib
+  BaseMemoryLib
+  #UefiLib
+  #PrintLib
+  #DevicePathLib
+
+  #VectorLib
+  #ProtocolGuidDatabaseLib
+  CommonMacrosLib
+  #HandleDatabaseDumpLib
+
+[Protocols]
+  gEfiBdsArchProtocolGuid
