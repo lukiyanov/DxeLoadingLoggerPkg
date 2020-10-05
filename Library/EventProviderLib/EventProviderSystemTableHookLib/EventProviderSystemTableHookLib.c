@@ -324,6 +324,7 @@ EFIAPI MyReinstallProtocolInterface (
 {
   if (IsBdsArchProtocolGuid (Protocol)) {
     gOriginalBdsArchProtocol = NewInterface;
+    OldInterface = &gMyBdsArchProtocol;
     NewInterface = &gMyBdsArchProtocol;
   }
 
