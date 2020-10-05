@@ -182,6 +182,11 @@ EventProvider_Construct(
 {
   DBG_ENTER ();
 
+  if (This == NULL) {
+    DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
+    return EFI_INVALID_PARAMETER;
+  }
+
   This->AddEvent     = AddEvent;
   This->ExternalData = ExternalData;
 
