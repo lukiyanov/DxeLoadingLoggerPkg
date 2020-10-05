@@ -21,7 +21,7 @@
   #        События собираются посредством вызова RegisterProtocolNotify() для известных протоколов.
   #        Гарантированно совместим со всеми прошивками, но даёт гораздо меньше информации.
   #
-  DEFINE EVENT_PROVIDER_GST_HOOK = FALSE  # TODO: в RELEASE-версии установить в TRUE
+  DEFINE EVENT_PROVIDER_GST_HOOK = TRUE
 
   #
   # Выводить номера событий в консоль.
