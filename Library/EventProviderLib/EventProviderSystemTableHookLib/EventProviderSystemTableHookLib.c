@@ -3,6 +3,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/PcdLib.h>
 #include <Library/EventProviderLib.h>
+#include <Library/EventProviderUtilityLib.h>
 #include <Library/CommonMacrosLib.h>
 #include <Protocol/Bds.h>
 
@@ -321,20 +322,27 @@ EFIAPI MyBdsArchProtocolEntry (
 EFI_STATUS
 EFIAPI MyInstallProtocolInterface (
   IN OUT EFI_HANDLE               *Handle,
-  IN     EFI_GUID                 *Protocol,
+  IN     EFI_GUID                 *ProtocolGuid,
   IN     EFI_INTERFACE_TYPE       InterfaceType,
   IN     VOID                     *Interface
   )
 {
   DBG_ENTER ();
 
-  if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (Protocol)) {
+  if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (ProtocolGuid)) {
     gOriginalBdsArchProtocol = Interface;
     Interface = &gMyBdsArchProtocol;
   }
 
-  EFI_STATUS Status = gOriginalInstallProtocolInterface (Handle, Protocol, InterfaceType, Interface);
-  // TODO: ...
+  EFI_STATUS Status = gOriginalInstallProtocolInterface (Handle, ProtocolGuid, InterfaceType, Interface);
+
+  // Event: PROTOCOL INSTALLED
+  LOADING_EVENT Event;
+  Event.Type                                = LOG_ENTRY_TYPE_PROTOCOL_INSTALLED;
+  Event.ProtocolInstalled.Guid              = *ProtocolGuid;
+  Event.ProtocolInstalled.Successful        = !EFI_ERROR (Status);
+  Event.ProtocolInstalled.HandleDescription = GetHandleName (Handle);
+  gProvider->AddEvent(gProvider->ExternalData, &Event);
 
   DBG_EXIT_STATUS (Status);
   return Status;
@@ -344,20 +352,20 @@ EFIAPI MyInstallProtocolInterface (
 EFI_STATUS
 EFIAPI MyReinstallProtocolInterface (
   IN EFI_HANDLE               Handle,
-  IN EFI_GUID                 *Protocol,
+  IN EFI_GUID                 *ProtocolGuid,
   IN VOID                     *OldInterface,
   IN VOID                     *NewInterface
   )
 {
   DBG_ENTER ();
 
-  if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (Protocol)) {
+  if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (ProtocolGuid)) {
     gOriginalBdsArchProtocol = NewInterface;
     OldInterface = &gMyBdsArchProtocol;
     NewInterface = &gMyBdsArchProtocol;
   }
 
-  EFI_STATUS Status = gOriginalReinstallProtocolInterface (Handle, Protocol, OldInterface, NewInterface);
+  EFI_STATUS Status = gOriginalReinstallProtocolInterface (Handle, ProtocolGuid, OldInterface, NewInterface);
   // TODO: ...
 
   DBG_EXIT_STATUS (Status);
@@ -368,18 +376,25 @@ EFIAPI MyReinstallProtocolInterface (
 EFI_STATUS
 EFIAPI MyUninstallProtocolInterface (
   IN EFI_HANDLE               Handle,
-  IN EFI_GUID                 *Protocol,
+  IN EFI_GUID                 *ProtocolGuid,
   IN VOID                     *Interface
   )
 {
   DBG_ENTER ();
 
-  if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (Protocol)) {
+  if (IsBdsArchProtocolGuidAndWeMustSubstituteIt (ProtocolGuid)) {
     Interface = &gMyBdsArchProtocol;
   }
 
-  EFI_STATUS Status = gOriginalUninstallProtocolInterface (Handle, Protocol, Interface);
-  // TODO: ...
+  EFI_STATUS Status = gOriginalUninstallProtocolInterface (Handle, ProtocolGuid, Interface);
+
+  // Event: PROTOCOL UNINSTALLED
+  LOADING_EVENT Event;
+  Event.Type                              = LOG_ENTRY_TYPE_PROTOCOL_REMOVED;
+  Event.ProtocolRemoved.Guid              = *ProtocolGuid;
+  Event.ProtocolRemoved.Successful        = !EFI_ERROR (Status);
+  Event.ProtocolRemoved.HandleDescription = GetHandleName (Handle);
+  gProvider->AddEvent(gProvider->ExternalData, &Event);
 
   DBG_EXIT_STATUS (Status);
   return Status;
@@ -405,8 +420,10 @@ EFIAPI MyInstallMultipleProtocolInterfaces (
     while (TRUE) {
       if (FunctionArgCount == ARG_ARRAY_ELEMENT_COUNT) {
         // Большее количество не поддерживем, это бессмысленно.
-
-        // TODO: добавить событие "Ошибка" в этом случае.
+        LOADING_EVENT Event;
+        Event.Type          = LOG_ENTRY_TYPE_ERROR;
+        Event.Error.Message = StrAllocCopy (L"InstallMultipleProtocolInterfaces(): limit of protocols reached");
+        gProvider->AddEvent(gProvider->ExternalData, &Event);
         break;
       }
 
@@ -429,7 +446,16 @@ EFIAPI MyInstallMultipleProtocolInterfaces (
   VA_END (VaList);
 
   EFI_STATUS Status = gOriginalInstallMultipleProtocolInterfaces (Handle, ARG_ARRAY_ALL_ELEMENTS(FunctionArgList), NULL);
-  // TODO: ...
+
+  for (int i = 0; i < ARG_ARRAY_ELEMENT_COUNT && FunctionArgList[i] != NULL; i += 2) {
+    // Event: PROTOCOL INSTALLED
+    LOADING_EVENT Event;
+    Event.Type                                = LOG_ENTRY_TYPE_PROTOCOL_INSTALLED;
+    Event.ProtocolInstalled.Guid              = *((EFI_GUID *) FunctionArgList[i]);
+    Event.ProtocolInstalled.Successful        = !EFI_ERROR (Status);
+    Event.ProtocolInstalled.HandleDescription = GetHandleName (Handle);
+    gProvider->AddEvent(gProvider->ExternalData, &Event);
+  }
 
   DBG_EXIT_STATUS (Status);
   return Status;
@@ -455,8 +481,10 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
     while (TRUE) {
       if (FunctionArgCount == ARG_ARRAY_ELEMENT_COUNT) {
         // Большее количество не поддерживем, это бессмысленно.
-
-        // TODO: добавить событие "Ошибка" в этом случае.
+        LOADING_EVENT Event;
+        Event.Type          = LOG_ENTRY_TYPE_ERROR;
+        Event.Error.Message = StrAllocCopy (L"UninstallMultipleProtocolInterfaces(): limit of protocols reached");
+        gProvider->AddEvent(gProvider->ExternalData, &Event);
         break;
       }
 
@@ -478,7 +506,16 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
   VA_END (VaList);
 
   EFI_STATUS Status = gOriginalUninstallMultipleProtocolInterfaces (Handle, ARG_ARRAY_ALL_ELEMENTS(FunctionArgList), NULL);
-  // TODO: ...
+
+  for (int i = 0; i < ARG_ARRAY_ELEMENT_COUNT && FunctionArgList[i] != NULL; i += 2) {
+    // Event: PROTOCOL UNINSTALLED
+    LOADING_EVENT Event;
+    Event.Type                              = LOG_ENTRY_TYPE_PROTOCOL_REMOVED;
+    Event.ProtocolRemoved.Guid              = *((EFI_GUID *) FunctionArgList[i]);
+    Event.ProtocolRemoved.Successful        = !EFI_ERROR (Status);
+    Event.ProtocolRemoved.HandleDescription = GetHandleName (Handle);
+    gProvider->AddEvent(gProvider->ExternalData, &Event);
+  }
 
   DBG_EXIT_STATUS (Status);
   return Status;

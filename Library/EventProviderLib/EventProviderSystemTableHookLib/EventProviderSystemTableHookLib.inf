@@ -15,7 +15,6 @@
 
 [LibraryClasses]
   UefiBootServicesTableLib
-  BaseLib
   BaseMemoryLib
   PcdLib
   #UefiLib
@@ -26,6 +25,7 @@
   #ProtocolGuidDatabaseLib
   CommonMacrosLib
   #HandleDatabaseDumpLib
+  EventProviderUtilityLib
 
 [Protocols]
   gEfiBdsArchProtocolGuid
