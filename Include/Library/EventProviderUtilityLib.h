@@ -91,21 +91,5 @@ CHAR16 *GetHandleName (
   );
 
 // -----------------------------------------------------------------------------
-/**
-  Взято из ShellPkg, возвращает имя модуля для тех из них что входят в состав образа.
-
-  Function to find the file name associated with a LoadedImageProtocol.
-
-  @param[in] LoadedImage     An instance of LoadedImageProtocol.
-
-  @retval                    A string representation of the file name associated
-                             with LoadedImage, or NULL if no name can be found.
-**/
-CHAR16 *
-FindLoadedImageFileName (
-  IN EFI_LOADED_IMAGE_PROTOCOL *LoadedImage
-  );
-
-// -----------------------------------------------------------------------------
 
 #endif // EVENT_PROVIDER_UTILITY_LIB_H_

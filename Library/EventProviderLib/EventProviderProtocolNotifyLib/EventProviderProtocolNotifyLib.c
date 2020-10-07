@@ -9,8 +9,6 @@
 #include <Library/ProtocolGuidDatabaseLib.h>
 #include <Library/CommonMacrosLib.h>
 
-// -----------------------------------------------------------------------------
-#define CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE 128
 
 // -----------------------------------------------------------------------------
 /// EVENT_PROVIDER -> Data
@@ -32,15 +30,6 @@ typedef struct
   VOID           *Registration;
 } NOTIFY_FUNCTION_CONTEXT;
 
-// -----------------------------------------------------------------------------
-/**
- * Если Protocol присутствует в БД, то функция генерит событие LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP.
-*/
-VOID
-CheckProtocolExistenceOnStartup (
-  IN  EVENT_PROVIDER  *This,
-  IN  EFI_GUID        *Protocol
-  );
 
 // -----------------------------------------------------------------------------
 /**
@@ -210,111 +199,6 @@ EventProvider_Stop (
     gBS->CloseEvent (*Event);
   }
   Vector_Clear (&DataStruct->EventHandles);
-
-  DBG_EXIT ();
-}
-
-// -----------------------------------------------------------------------------
-/**
- * Если Protocol присутствует в БД, то функция генерит событие LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP.
-*/
-VOID
-CheckProtocolExistenceOnStartup (
-  IN EVENT_PROVIDER  *This,
-  IN EFI_GUID        *Protocol
-  )
-{
-  DBG_ENTER ();
-
-  EFI_STATUS     Status;
-  VOID           *Iface;
-
-  Status = gBS->LocateProtocol (Protocol, NULL, &Iface);
-  DBG_INFO ("-- Protocol %g exists: %u\n", Protocol, (unsigned)(!EFI_ERROR (Status)));
-
-  if (EFI_ERROR (Status)) {
-    DBG_EXIT_STATUS (EFI_NOT_FOUND);
-    return;
-  }
-
-  CHAR16 *HandleDescription = NULL;
-
-  EFI_HANDLE *Handles;
-  UINTN      HandleCount;
-
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  Protocol,
-                  NULL,
-                  &HandleCount,
-                  &Handles
-                  );
-  if (EFI_ERROR (Status)) {
-    HandleDescription = StrAllocCopy (L"<ERROR: can\t get handle buffer for protocol>");
-  } else {
-    static CHAR16 Buffer[CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE];
-    UnicodeSPrint(Buffer, CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE * sizeof(CHAR16), L"[%3u] { ", (unsigned)HandleCount);
-    HandleDescription = StrAllocCopy (L"");
-    StrAllocAppend(&HandleDescription, Buffer);
-
-    BOOLEAN First = TRUE;
-
-    // Добавляем сначала образы.
-    // Попутно считаем, сколько у нас хэндлов не-образов.
-    UINTN NotImageHandleCount = 0;
-    for (UINTN Index = 0; Index < HandleCount; ++Index) {
-      if (IsHandleImage (Handles[Index])) {
-        if (First) {
-          First = FALSE;
-        } else {
-          StrAllocAppend(&HandleDescription, L", ");
-        }
-
-        CHAR16 *CurrentImageName = GetHandleName (Handles[Index]);
-        StrAllocAppend(&HandleDescription, CurrentImageName);
-        SHELL_FREE_NON_NULL (CurrentImageName);
-      } else
-      {
-         ++NotImageHandleCount;
-      }
-    }
-
-    // Затем всё остальное:
-    if (NotImageHandleCount > 0) {
-      // Если были образы, то после них переводим на новую строку.
-      if (!First) {
-          StrAllocAppend(&HandleDescription, L"; ");
-      }
-
-      UnicodeSPrint(Buffer, CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE * sizeof(CHAR16), L"not images (%u): ", (unsigned)NotImageHandleCount);
-      StrAllocAppend(&HandleDescription, Buffer);
-
-      First = TRUE;
-      for (UINTN Index = 0; Index < HandleCount; ++Index) {
-        if (!IsHandleImage (Handles[Index])) {
-          if (First) {
-            First = FALSE;
-          } else {
-            StrAllocAppend(&HandleDescription, L", ");
-          }
-
-          CHAR16 *CurrentImageName = GetHandleName (Handles[Index]);
-          StrAllocAppend(&HandleDescription, CurrentImageName);
-          SHELL_FREE_NON_NULL (CurrentImageName);
-        }
-      }
-    }
-
-    StrAllocAppend(&HandleDescription, L" }");
-    SHELL_FREE_NON_NULL (Handles);
-  }
-
-  LOADING_EVENT  Event;
-  Event.Type                               = LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP;
-  Event.ProtocolExistsOnStartup.Guid       = *Protocol;
-  Event.ProtocolExistsOnStartup.HandleDescription = HandleDescription;
-
-  This->AddEvent (This->ExternalData, &Event);
 
   DBG_EXIT ();
 }
