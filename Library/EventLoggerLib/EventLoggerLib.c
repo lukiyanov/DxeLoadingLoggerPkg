@@ -146,7 +146,16 @@ AddEventToLog (
 
   LOGGER *This = (LOGGER *)Logger;
 
-  Vector_PushBack (&This->LogData, Event);
+  EFI_STATUS Status;
+  Status = Vector_PushBack (&This->LogData, Event);
+  if (EFI_ERROR (Status)) {
+    DBG_ERROR1 ("Vector_PushBack(Event) failed\n");
+
+    gBS->RestoreTPL (OldTpl);
+
+    DBG_EXIT_STATUS (EFI_ABORTED);
+    return;
+  }
 
   if (This->EventIncomedCallback != NULL) {
     This->EventIncomedCallback ();
