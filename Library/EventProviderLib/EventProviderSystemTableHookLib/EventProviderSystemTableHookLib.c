@@ -191,6 +191,11 @@ EventProvider_Construct(
     return EFI_INVALID_PARAMETER;
   }
 
+  if (gProvider != NULL) {
+    DBG_EXIT_STATUS (RETURN_UNSUPPORTED);
+    return RETURN_UNSUPPORTED;
+  }
+
   This->AddEvent     = AddEvent;
   This->ExternalData = ExternalData;
   This->Data         = NULL;
