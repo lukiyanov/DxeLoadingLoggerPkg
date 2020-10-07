@@ -90,8 +90,8 @@ EFIAPI MyBdsArchProtocolEntry (
   );
 
 static GLOBAL_REMOVE_IF_UNREFERENCED EFI_BDS_ARCH_PROTOCOL gMyBdsArchProtocol = { &MyBdsArchProtocolEntry };
-static GLOBAL_REMOVE_IF_UNREFERENCED EFI_BDS_ARCH_PROTOCOL *gOriginalBdsArchProtocol = NULL;
-
+static GLOBAL_REMOVE_IF_UNREFERENCED EFI_BDS_ARCH_PROTOCOL *gOriginalBdsArchProtocol;
+static GLOBAL_REMOVE_IF_UNREFERENCED EVENT_PROVIDER        *gProvider;
 
 // -----------------------------------------------------------------------------
 // Указатели на оригинальные системные сервисы.
@@ -194,6 +194,8 @@ EventProvider_Construct(
   This->ExternalData = ExternalData;
   This->Data         = NULL;
 
+  gProvider = This;
+
   DBG_EXIT_STATUS (EFI_SUCCESS);
   return EFI_SUCCESS;
 }
@@ -211,6 +213,7 @@ EventProvider_Destruct (
   DBG_ENTER ();
 
   EventProvider_Stop (This);
+  gProvider = NULL;
 
   DBG_EXIT ();
 }
@@ -296,12 +299,20 @@ EFIAPI MyBdsArchProtocolEntry (
   )
 {
   DBG_ENTER ();
+  LOADING_EVENT Event;
 
-  // TODO: BEFORE
+  // Event: BEFORE
+  Event.Type = LOG_ENTRY_TYPE_BDS_STAGE_ENTERED;
+  Event.BdsStageEntered.SubEvent = BDS_STAGE_EVENT_BEFORE_ENTRY_CALLING;
+  gProvider->AddEvent(gProvider->ExternalData, &Event);
 
+  // Переход на BDS стадию.
   gOriginalBdsArchProtocol->Entry(This);
 
-  // TODO: AFTER
+  // Event: AFTER
+  Event.Type = LOG_ENTRY_TYPE_BDS_STAGE_ENTERED;
+  Event.BdsStageEntered.SubEvent = BDS_STAGE_EVENT_AFTER_ENTRY_CALLING;
+  gProvider->AddEvent(gProvider->ExternalData, &Event);
 
   DBG_EXIT ();
 }
