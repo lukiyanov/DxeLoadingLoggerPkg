@@ -264,7 +264,7 @@ DetectImagesLoadedOnStartup (
       &Event.ImageExistsOnStartup.ParentImageName
       );
 
-    This->AddEvent(This->ExternalData, &Event);
+    This->AddEvent (This->ExternalData, &Event);
   }
 
   gBS->FreePool (Handles);
@@ -372,7 +372,7 @@ CheckProtocolExistenceOnStartup (
   Event.ProtocolExistsOnStartup.Guid       = *Protocol;
   Event.ProtocolExistsOnStartup.HandleDescription = HandleDescription;
 
-  This->AddEvent(This->ExternalData, &Event);
+  This->AddEvent (This->ExternalData, &Event);
 
   DBG_EXIT ();
 }
@@ -504,7 +504,7 @@ ProtocolInstalledCallback (
     }
   }
 
-  This->AddEvent(This->ExternalData, &Event);
+  This->AddEvent (This->ExternalData, &Event);
   DBG_EXIT ();
 }
 

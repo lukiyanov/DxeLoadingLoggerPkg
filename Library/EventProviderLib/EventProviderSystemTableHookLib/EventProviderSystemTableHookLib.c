@@ -305,7 +305,7 @@ EFIAPI MyBdsArchProtocolEntry (
   // Event: BEFORE
   Event.Type = LOG_ENTRY_TYPE_BDS_STAGE_ENTERED;
   Event.BdsStageEntered.SubEvent = BDS_STAGE_EVENT_BEFORE_ENTRY_CALLING;
-  gProvider->AddEvent(gProvider->ExternalData, &Event);
+  gProvider->AddEvent (gProvider->ExternalData, &Event);
 
   // Переход на BDS стадию.
   gOriginalBdsArchProtocol->Entry(This);
@@ -313,7 +313,7 @@ EFIAPI MyBdsArchProtocolEntry (
   // Event: AFTER
   Event.Type = LOG_ENTRY_TYPE_BDS_STAGE_ENTERED;
   Event.BdsStageEntered.SubEvent = BDS_STAGE_EVENT_AFTER_ENTRY_CALLING;
-  gProvider->AddEvent(gProvider->ExternalData, &Event);
+  gProvider->AddEvent (gProvider->ExternalData, &Event);
 
   DBG_EXIT ();
 }
@@ -342,7 +342,7 @@ EFIAPI MyInstallProtocolInterface (
   Event.ProtocolInstalled.Guid              = *ProtocolGuid;
   Event.ProtocolInstalled.Successful        = !EFI_ERROR (Status);
   Event.ProtocolInstalled.HandleDescription = GetHandleName (Handle);
-  gProvider->AddEvent(gProvider->ExternalData, &Event);
+  gProvider->AddEvent (gProvider->ExternalData, &Event);
 
   DBG_EXIT_STATUS (Status);
   return Status;
@@ -394,7 +394,7 @@ EFIAPI MyUninstallProtocolInterface (
   Event.ProtocolRemoved.Guid              = *ProtocolGuid;
   Event.ProtocolRemoved.Successful        = !EFI_ERROR (Status);
   Event.ProtocolRemoved.HandleDescription = GetHandleName (Handle);
-  gProvider->AddEvent(gProvider->ExternalData, &Event);
+  gProvider->AddEvent (gProvider->ExternalData, &Event);
 
   DBG_EXIT_STATUS (Status);
   return Status;
@@ -423,7 +423,7 @@ EFIAPI MyInstallMultipleProtocolInterfaces (
         LOADING_EVENT Event;
         Event.Type          = LOG_ENTRY_TYPE_ERROR;
         Event.Error.Message = StrAllocCopy (L"InstallMultipleProtocolInterfaces(): limit of protocols reached");
-        gProvider->AddEvent(gProvider->ExternalData, &Event);
+        gProvider->AddEvent (gProvider->ExternalData, &Event);
         break;
       }
 
@@ -445,7 +445,11 @@ EFIAPI MyInstallMultipleProtocolInterfaces (
   }
   VA_END (VaList);
 
-  EFI_STATUS Status = gOriginalInstallMultipleProtocolInterfaces (Handle, ARG_ARRAY_ALL_ELEMENTS(FunctionArgList), NULL);
+  EFI_STATUS Status = gOriginalInstallMultipleProtocolInterfaces (
+                        Handle,
+                        ARG_ARRAY_ALL_ELEMENTS(FunctionArgList),
+                        NULL
+                        );
 
   for (int i = 0; i < ARG_ARRAY_ELEMENT_COUNT && FunctionArgList[i] != NULL; i += 2) {
     // Event: PROTOCOL INSTALLED
@@ -454,7 +458,7 @@ EFIAPI MyInstallMultipleProtocolInterfaces (
     Event.ProtocolInstalled.Guid              = *((EFI_GUID *) FunctionArgList[i]);
     Event.ProtocolInstalled.Successful        = !EFI_ERROR (Status);
     Event.ProtocolInstalled.HandleDescription = GetHandleName (Handle);
-    gProvider->AddEvent(gProvider->ExternalData, &Event);
+    gProvider->AddEvent (gProvider->ExternalData, &Event);
   }
 
   DBG_EXIT_STATUS (Status);
@@ -484,7 +488,7 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
         LOADING_EVENT Event;
         Event.Type          = LOG_ENTRY_TYPE_ERROR;
         Event.Error.Message = StrAllocCopy (L"UninstallMultipleProtocolInterfaces(): limit of protocols reached");
-        gProvider->AddEvent(gProvider->ExternalData, &Event);
+        gProvider->AddEvent (gProvider->ExternalData, &Event);
         break;
       }
 
@@ -505,7 +509,11 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
   }
   VA_END (VaList);
 
-  EFI_STATUS Status = gOriginalUninstallMultipleProtocolInterfaces (Handle, ARG_ARRAY_ALL_ELEMENTS(FunctionArgList), NULL);
+  EFI_STATUS Status = gOriginalUninstallMultipleProtocolInterfaces (
+                        Handle,
+                        ARG_ARRAY_ALL_ELEMENTS(FunctionArgList),
+                        NULL
+                        );
 
   for (int i = 0; i < ARG_ARRAY_ELEMENT_COUNT && FunctionArgList[i] != NULL; i += 2) {
     // Event: PROTOCOL UNINSTALLED
@@ -514,7 +522,7 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
     Event.ProtocolRemoved.Guid              = *((EFI_GUID *) FunctionArgList[i]);
     Event.ProtocolRemoved.Successful        = !EFI_ERROR (Status);
     Event.ProtocolRemoved.HandleDescription = GetHandleName (Handle);
-    gProvider->AddEvent(gProvider->ExternalData, &Event);
+    gProvider->AddEvent (gProvider->ExternalData, &Event);
   }
 
   DBG_EXIT_STATUS (Status);
