@@ -238,6 +238,17 @@ EventProvider_Start (
     return EFI_INVALID_PARAMETER;
   }
 
+  EFI_STATUS Status;
+  Status = DetectImagesLoadedOnStartup (This);
+  RETURN_ON_ERR (Status)
+
+  // UINTN KnownProtocolGuidCount = GetProtocolGuidCount();
+
+  // for (UINTN Index = 0; Index < KnownProtocolGuidCount; ++Index) {
+  //   EFI_GUID *Guid = GetProtocolGuid(Index);
+  //   CheckProtocolExistenceOnStartup (This, Guid);
+  // }
+
   EFI_TPL PreviousTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
   {
     gOriginalInstallProtocolInterface            = gST->BootServices->InstallProtocolInterface;
