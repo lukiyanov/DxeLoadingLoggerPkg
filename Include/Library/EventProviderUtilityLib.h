@@ -2,10 +2,21 @@
  * Содержит общие функции для всех типов EventProvider.
  */
 #include <Uefi.h>
+#include <Library/EventProviderLib.h>
 #include <Protocol/LoadedImage.h>
 
 #ifndef EVENT_PROVIDER_UTILITY_LIB_H_
 #define EVENT_PROVIDER_UTILITY_LIB_H_
+
+// -----------------------------------------------------------------------------
+/**
+ * Создаёт по LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP для каждого образа,
+ * уже загруженного в момент нашего запуска.
+*/
+EFI_STATUS
+DetectImagesLoadedOnStartup (
+  IN OUT EVENT_PROVIDER *This
+  );
 
 // -----------------------------------------------------------------------------
 /**
