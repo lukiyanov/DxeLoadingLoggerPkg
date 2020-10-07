@@ -366,7 +366,14 @@ EFIAPI MyReinstallProtocolInterface (
   }
 
   EFI_STATUS Status = gOriginalReinstallProtocolInterface (Handle, ProtocolGuid, OldInterface, NewInterface);
-  // TODO: ...
+
+  // Event: PROTOCOL REINSTALLED
+  LOADING_EVENT Event;
+  Event.Type                                  = LOG_ENTRY_TYPE_PROTOCOL_REINSTALLED;
+  Event.ProtocolReinstalled.Guid              = *ProtocolGuid;
+  Event.ProtocolReinstalled.Successful        = !EFI_ERROR (Status);
+  Event.ProtocolReinstalled.HandleDescription = GetHandleName (Handle);
+  gProvider->AddEvent (gProvider->ExternalData, &Event);
 
   DBG_EXIT_STATUS (Status);
   return Status;

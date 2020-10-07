@@ -185,6 +185,22 @@ AddEventToLog (
     }
     break;
 
+  case LOG_ENTRY_TYPE_PROTOCOL_REINSTALLED:
+    GuidName = GetProtocolName (&Event->ProtocolReinstalled.Guid);
+    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_REINSTALLED\n");
+    if (GuidName == NULL) {
+      DBG_INFO  ("Guid:             %g\n", &Event->ProtocolReinstalled.Guid);
+    } else {
+      DBG_INFO  ("Guid:             %s\n", GuidName);
+    }
+    DBG_INFO  ("Handle:   %s\n", DBG_STR_NO_NULL (Event->ProtocolReinstalled.HandleDescription));
+    if (Event->ProtocolReinstalled.Successful) {
+      DBG_INFO1 ("Successful:       TRUE\n");
+    } else {
+      DBG_INFO1 ("Successful:       FALSE\n");
+    }
+    break;
+
   case LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP:
     GuidName = GetProtocolName(&Event->ProtocolExistsOnStartup.Guid);
     DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP\n");
