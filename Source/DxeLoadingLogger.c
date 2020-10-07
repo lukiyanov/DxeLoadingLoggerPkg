@@ -192,8 +192,7 @@ AddNewEventToLog (
   {
   case LOG_ENTRY_TYPE_PROTOCOL_INSTALLED:
     {
-      CHAR16 *ImageNameWho   = Event->ProtocolInstalled.ImageNameWhoInstalled;
-      CHAR16 *ImageNameWhere = Event->ProtocolInstalled.ImageNameWhereInstalled;
+      CHAR16 *ImageNameWhere = Event->ProtocolInstalled.HandleDescription;
       CHAR16 *GuidName       = GetProtocolName (&Event->ProtocolInstalled.Guid);
       CHAR16 *Success        = NULL;
 
@@ -214,15 +213,7 @@ AddNewEventToLog (
       }
 
       if (ImageNameWhere != NULL) {
-        if (ImageNameWho != NULL) {
-          PrintToFile (gLogFileProtocol, L" at: %-40s", ImageNameWhere);
-        } else {
-          PrintToFile (gLogFileProtocol, L" at: %s", ImageNameWhere);
-        }
-      }
-
-      if (ImageNameWho != NULL) {
-        PrintToFile (gLogFileProtocol, L" by: %s", ImageNameWho);
+        PrintToFile (gLogFileProtocol, L" at: %s", ImageNameWhere);
       }
 
       PrintToFile (gLogFileProtocol, L"\r\n");
@@ -233,16 +224,16 @@ AddNewEventToLog (
     {
       CHAR16 *GuidName = GetProtocolName(&Event->ProtocolExistsOnStartup.Guid);
 
-      if (Event->ProtocolExistsOnStartup.ImageNames != NULL) {
+      if (Event->ProtocolExistsOnStartup.HandleDescription != NULL) {
         if (GuidName != NULL) {
           PrintToFile (gLogFileProtocol, L"-%5u- PROTOCOL-EXISTS-ON-STARTUP: %-60s at: %s\r\n", Number,
             GuidName,
-            Event->ProtocolExistsOnStartup.ImageNames
+            Event->ProtocolExistsOnStartup.HandleDescription
             );
         } else {
           PrintToFile (gLogFileProtocol, L"-%5u- PROTOCOL-EXISTS-ON-STARTUP: %-60g at: %s\r\n", Number,
             &Event->ProtocolExistsOnStartup.Guid,
-            Event->ProtocolExistsOnStartup.ImageNames
+            Event->ProtocolExistsOnStartup.HandleDescription
             );
         }
       } else {
@@ -261,8 +252,7 @@ AddNewEventToLog (
 
   case LOG_ENTRY_TYPE_PROTOCOL_REMOVED:
     {
-      CHAR16 *ImageNameWho   = Event->ProtocolRemoved.ImageNameWhoInstalled;
-      CHAR16 *ImageNameWhere = Event->ProtocolRemoved.ImageNameWhereInstalled;
+      CHAR16 *ImageNameWhere = Event->ProtocolRemoved.HandleDescription;
       CHAR16 *GuidName       = GetProtocolName (&Event->ProtocolRemoved.Guid);
       CHAR16 *Success        = NULL;
 
@@ -283,15 +273,7 @@ AddNewEventToLog (
       }
 
       if (ImageNameWhere != NULL) {
-        if (ImageNameWho != NULL) {
-          PrintToFile (gLogFileProtocol, L" at: %-40s", ImageNameWhere);
-        } else {
-          PrintToFile (gLogFileProtocol, L" at: %s", ImageNameWhere);
-        }
-      }
-
-      if (ImageNameWho != NULL) {
-        PrintToFile (gLogFileProtocol, L" by: %s", ImageNameWho);
+        PrintToFile (gLogFileProtocol, L" at: %s", ImageNameWhere);
       }
 
       PrintToFile (gLogFileProtocol, L"\r\n");
@@ -341,6 +323,14 @@ AddNewEventToLog (
       PrintToFile (gLogFileProtocol, Line);
       PrintToFile (gLogFileProtocol, L"-%5u- BDS-STAGE-ENTERED: %s\r\n", Number, SubType);
       PrintToFile (gLogFileProtocol, Line);
+    }
+    break;
+
+  case LOG_ENTRY_TYPE_ERROR:
+    {
+      CHAR16 *Message = Event->Error.Message ? Event->Error.Message : StrUnknown;
+
+      PrintToFile (gLogFileProtocol, L"\r\n\r\n-%5u- ERROR: %s\r\n\r\n", Number, Message);
     }
     break;
 

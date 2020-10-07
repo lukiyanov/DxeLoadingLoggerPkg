@@ -177,8 +177,7 @@ AddEventToLog (
     } else {
       DBG_INFO  ("Guid:             %s\n", GuidName);
     }
-    DBG_INFO  ("ImageNameWho(s):     %s\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.ImageNameWhoInstalled));
-    DBG_INFO  ("ImageNameWhere(s):   %s\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.ImageNameWhereInstalled));
+    DBG_INFO  ("Handle:   %s\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.HandleDescription));
     if (Event->ProtocolInstalled.Successful) {
       DBG_INFO1 ("Successful:       TRUE\n");
     } else {
@@ -194,7 +193,7 @@ AddEventToLog (
     } else {
       DBG_INFO  ("Guid:             %s\n", GuidName);
     }
-    DBG_INFO  ("ImageName(s):     %s\n", DBG_STR_NO_NULL (Event->ProtocolExistsOnStartup.ImageNames));
+    DBG_INFO  ("Handles:     %s\n", DBG_STR_NO_NULL (Event->ProtocolExistsOnStartup.HandleDescription));
     break;
 
   case LOG_ENTRY_TYPE_PROTOCOL_REMOVED:
@@ -205,8 +204,7 @@ AddEventToLog (
     } else {
       DBG_INFO  ("Guid:             %s\n", GuidName);
     }
-    DBG_INFO  ("ImageNameWho(s):     %s\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.ImageNameWhoInstalled));
-    DBG_INFO  ("ImageNameWhere(s):   %s\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.ImageNameWhereInstalled));
+    DBG_INFO  ("Handle:   %s\n", DBG_STR_NO_NULL (Event->ProtocolInstalled.HandleDescription));
     if (Event->ProtocolRemoved.Successful) {
       DBG_INFO1 ("Successful:       TRUE\n");
     } else {
@@ -239,6 +237,11 @@ AddEventToLog (
       DBG_INFO1 ("ERROR: Unknown SubEvent type\n");
       break;
     }
+    break;
+
+  case LOG_ENTRY_TYPE_ERROR:
+    DBG_INFO1 ("Type:             LOG_ENTRY_TYPE_ERROR\n");
+    DBG_INFO  ("Message:          %s\n", DBG_STR_NO_NULL (Event->Error.Message));
     break;
 
   default:
