@@ -41,7 +41,7 @@
   # Генерит подробный и длинный лог свой работы.
   # Только для отладки.
   #
-  DEFINE DEBUG_MACROS_OUTPUT_ON = FALSE
+  DEFINE DEBUG_MACROS_OUTPUT_ON = TRUE
 
   #
   # TRUE:
