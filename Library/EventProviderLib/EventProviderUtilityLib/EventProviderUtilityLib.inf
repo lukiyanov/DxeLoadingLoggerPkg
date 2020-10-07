@@ -1,0 +1,26 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = EventProviderUtilityLib
+  FILE_GUID                      = 3CBA44B4-247F-45E1-A8DB-C60F55BA2CDC
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = EventProviderUtilityLib | DXE_DRIVER UEFI_APPLICATION UEFI_DRIVER
+
+[Sources]
+  EventProviderUtilityLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  DxeLoadingLoggerPkg/DxeLoadingLoggerPkg.dec
+
+[LibraryClasses]
+  UefiBootServicesTableLib
+  UefiLib
+  PrintLib
+  DevicePathLib
+  CommonMacrosLib
+
+[Protocols]
+  gEfiLoadedImageProtocolGuid
+  gEfiFirmwareVolume2ProtocolGuid
+  gEfiDevicePathProtocolGuid
