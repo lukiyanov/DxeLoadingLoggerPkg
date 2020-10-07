@@ -11,7 +11,7 @@
 
 #include <Library/EventProviderUtilityLib.h>
 #include <Library/CommonMacrosLib.h>
-
+#include <Library/HandleDatabaseDumpLib.h>
 
 // -----------------------------------------------------------------------------
 #define GET_HANDLE_NAME_BUFFER_SIZE          1024
@@ -59,6 +59,39 @@ DetectImagesLoadedOnStartup (
   }
 
   gBS->FreePool (Handles);
+  DBG_EXIT_STATUS (EFI_SUCCESS);
+  return EFI_SUCCESS;
+}
+
+// -----------------------------------------------------------------------------
+/**
+ * Создаёт по LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP для каждого протокола,
+ * уже установленного в момент нашего запуска.
+*/
+EFI_STATUS
+DetectProtocolsInstalledOnStartup (
+  IN OUT EVENT_PROVIDER *This
+  )
+{
+  EFI_STATUS  Status;
+
+  HANDLE_DATABASE_DUMP HandleDbDump;
+  Status = GetHandleDatabaseDump (&HandleDbDump);
+  RETURN_ON_ERR (Status);
+
+  VECTOR TYPE (EFI_GUID) Protocols;
+  Status = HandleDatabaseDump_PeekAllProtocols (&HandleDbDump, &Protocols);
+  if (EFI_ERROR (Status)) {
+    HandleDatabaseDump_Destruct (&HandleDbDump);
+    DBG_EXIT_STATUS (Status);
+    return Status;
+  }
+
+  // TODO
+
+  Vector_Destruct (&Protocols);
+  HandleDatabaseDump_Destruct (&HandleDbDump);
+
   DBG_EXIT_STATUS (EFI_SUCCESS);
   return EFI_SUCCESS;
 }

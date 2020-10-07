@@ -242,12 +242,8 @@ EventProvider_Start (
   Status = DetectImagesLoadedOnStartup (This);
   RETURN_ON_ERR (Status)
 
-  // UINTN KnownProtocolGuidCount = GetProtocolGuidCount();
-
-  // for (UINTN Index = 0; Index < KnownProtocolGuidCount; ++Index) {
-  //   EFI_GUID *Guid = GetProtocolGuid(Index);
-  //   CheckProtocolExistenceOnStartup (This, Guid);
-  // }
+  Status = DetectProtocolsInstalledOnStartup (This);
+  RETURN_ON_ERR (Status)
 
   EFI_TPL PreviousTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
   {

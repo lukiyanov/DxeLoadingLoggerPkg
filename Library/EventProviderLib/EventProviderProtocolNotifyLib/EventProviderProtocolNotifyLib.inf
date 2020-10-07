@@ -21,7 +21,6 @@
   VectorLib
   ProtocolGuidDatabaseLib
   CommonMacrosLib
-  #HandleDatabaseDumpLib #TODO
   EventProviderUtilityLib
 
 [Protocols]
