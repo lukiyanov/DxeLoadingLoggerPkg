@@ -23,7 +23,7 @@ typedef PACKED struct {
   GUID    Guid;
   BOOLEAN Successful;
   CHAR16  *HandleDescription;
-} LOG_ENTRY_PROTOCOL_INSTALLED, LOG_ENTRY_PROTOCOL_REMOVED;
+} LOG_ENTRY_PROTOCOL_INSTALLED, LOG_ENTRY_PROTOCOL_REINSTALLED, LOG_ENTRY_PROTOCOL_REMOVED;
 
 // -----------------------------------------------------------------------------
 typedef PACKED struct {
@@ -58,9 +58,9 @@ typedef PACKED struct {
   LOG_ENTRY_TYPE Type;
   union {
     LOG_ENTRY_PROTOCOL_INSTALLED          ProtocolInstalled;
-    LOG_ENTRY_PROTOCOL_EXISTS_ON_STARTUP  ProtocolExistsOnStartup;
+    LOG_ENTRY_PROTOCOL_REINSTALLED        ProtocolReinstalled;
     LOG_ENTRY_PROTOCOL_REMOVED            ProtocolRemoved;
-//    LOG_ENTRY_PROTOCOL_REINSTALLED        ProtocolReinstalled;
+    LOG_ENTRY_PROTOCOL_EXISTS_ON_STARTUP  ProtocolExistsOnStartup;
     LOG_ENTRY_IMAGE_LOADED                ImageLoaded;
     LOG_ENTRY_IMAGE_EXISTS_ON_STARTUP     ImageExistsOnStartup;
     LOG_ENTRY_BDS_STAGE_ENTERED           BdsStageEntered;

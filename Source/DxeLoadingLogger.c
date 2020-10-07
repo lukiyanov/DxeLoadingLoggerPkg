@@ -220,6 +220,36 @@ AddNewEventToLog (
     }
     break;
 
+  case LOG_ENTRY_TYPE_PROTOCOL_REINSTALLED:
+    {
+      CHAR16 *ImageNameWhere = Event->ProtocolReinstalled.HandleDescription;
+      CHAR16 *GuidName       = GetProtocolName (&Event->ProtocolReinstalled.Guid);
+      CHAR16 *Success        = NULL;
+
+      if (Event->ProtocolReinstalled.Successful) {
+        Success = L"SUCCESS";
+      } else {
+        Success = L"FAIL";
+      }
+
+      if (GuidName != NULL) {
+        PrintToFile (gLogFileProtocol, L"-%5u- PROTOCOL-REINSTALLED (%s): %-60s", Number, Success,
+          GuidName
+          );
+      } else {
+        PrintToFile (gLogFileProtocol, L"-%5u- PROTOCOL-REINSTALLED (%s): %-60g", Number, Success,
+          &Event->ProtocolReinstalled.Guid
+          );
+      }
+
+      if (ImageNameWhere != NULL) {
+        PrintToFile (gLogFileProtocol, L" at: %s", ImageNameWhere);
+      }
+
+      PrintToFile (gLogFileProtocol, L"\r\n");
+    }
+    break;
+
   case LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP:
     {
       CHAR16 *GuidName = GetProtocolName(&Event->ProtocolExistsOnStartup.Guid);

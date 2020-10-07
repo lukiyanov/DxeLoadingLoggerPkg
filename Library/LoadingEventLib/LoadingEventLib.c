@@ -21,12 +21,16 @@ LoadingEvent_Destruct (
     SHELL_FREE_NON_NULL (Event->ProtocolInstalled.HandleDescription);
     break;
 
-  case LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP:
-    SHELL_FREE_NON_NULL (Event->ProtocolExistsOnStartup.HandleDescription);
+  case LOG_ENTRY_TYPE_PROTOCOL_REINSTALLED:
+    SHELL_FREE_NON_NULL (Event->ProtocolReinstalled.HandleDescription);
     break;
 
   case LOG_ENTRY_TYPE_PROTOCOL_REMOVED:
     SHELL_FREE_NON_NULL (Event->ProtocolRemoved.HandleDescription);
+    break;
+
+  case LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP:
+    SHELL_FREE_NON_NULL (Event->ProtocolExistsOnStartup.HandleDescription);
     break;
 
   case LOG_ENTRY_TYPE_IMAGE_LOADED:
