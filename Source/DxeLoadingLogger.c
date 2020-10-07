@@ -192,9 +192,9 @@ AddNewEventToLog (
   {
   case LOG_ENTRY_TYPE_PROTOCOL_INSTALLED:
     {
-      CHAR16 *ImageNameWhere = Event->ProtocolInstalled.HandleDescription;
-      CHAR16 *GuidName       = GetProtocolName (&Event->ProtocolInstalled.Guid);
-      CHAR16 *Success        = NULL;
+      CHAR16 *HandleDescription = Event->ProtocolInstalled.HandleDescription;
+      CHAR16 *GuidName          = GetProtocolName (&Event->ProtocolInstalled.Guid);
+      CHAR16 *Success           = NULL;
 
       if (Event->ProtocolInstalled.Successful) {
         Success = L"SUCCESS";
@@ -212,8 +212,8 @@ AddNewEventToLog (
           );
       }
 
-      if (ImageNameWhere != NULL) {
-        PrintToFile (gLogFileProtocol, L" at: %s", ImageNameWhere);
+      if (HandleDescription != NULL) {
+        PrintToFile (gLogFileProtocol, L" at: %s", HandleDescription);
       }
 
       PrintToFile (gLogFileProtocol, L"\r\n");
@@ -222,9 +222,9 @@ AddNewEventToLog (
 
   case LOG_ENTRY_TYPE_PROTOCOL_REINSTALLED:
     {
-      CHAR16 *ImageNameWhere = Event->ProtocolReinstalled.HandleDescription;
-      CHAR16 *GuidName       = GetProtocolName (&Event->ProtocolReinstalled.Guid);
-      CHAR16 *Success        = NULL;
+      CHAR16 *HandleDescription = Event->ProtocolReinstalled.HandleDescription;
+      CHAR16 *GuidName          = GetProtocolName (&Event->ProtocolReinstalled.Guid);
+      CHAR16 *Success           = NULL;
 
       if (Event->ProtocolReinstalled.Successful) {
         Success = L"SUCCESS";
@@ -242,8 +242,8 @@ AddNewEventToLog (
           );
       }
 
-      if (ImageNameWhere != NULL) {
-        PrintToFile (gLogFileProtocol, L" at: %s", ImageNameWhere);
+      if (HandleDescription != NULL) {
+        PrintToFile (gLogFileProtocol, L" at: %s", HandleDescription);
       }
 
       PrintToFile (gLogFileProtocol, L"\r\n");
@@ -282,9 +282,9 @@ AddNewEventToLog (
 
   case LOG_ENTRY_TYPE_PROTOCOL_REMOVED:
     {
-      CHAR16 *ImageNameWhere = Event->ProtocolRemoved.HandleDescription;
-      CHAR16 *GuidName       = GetProtocolName (&Event->ProtocolRemoved.Guid);
-      CHAR16 *Success        = NULL;
+      CHAR16 *HandleDescription = Event->ProtocolRemoved.HandleDescription;
+      CHAR16 *GuidName          = GetProtocolName (&Event->ProtocolRemoved.Guid);
+      CHAR16 *Success           = NULL;
 
       if (Event->ProtocolRemoved.Successful) {
         Success = L"SUCCESS";
@@ -302,8 +302,8 @@ AddNewEventToLog (
           );
       }
 
-      if (ImageNameWhere != NULL) {
-        PrintToFile (gLogFileProtocol, L" at: %s", ImageNameWhere);
+      if (HandleDescription != NULL) {
+        PrintToFile (gLogFileProtocol, L" at: %s", HandleDescription);
       }
 
       PrintToFile (gLogFileProtocol, L"\r\n");
