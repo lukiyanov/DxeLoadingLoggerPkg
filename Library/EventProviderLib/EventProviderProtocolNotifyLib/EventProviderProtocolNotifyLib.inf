@@ -15,18 +15,14 @@
 
 [LibraryClasses]
   UefiBootServicesTableLib
-  BaseLib
   BaseMemoryLib
-  UefiLib
   PrintLib
-  DevicePathLib
 
   VectorLib
   ProtocolGuidDatabaseLib
   CommonMacrosLib
-  HandleDatabaseDumpLib
+  #HandleDatabaseDumpLib #TODO
+  EventProviderUtilityLib
 
 [Protocols]
   gEfiLoadedImageProtocolGuid
-  gEfiFirmwareVolume2ProtocolGuid
-  gEfiDevicePathProtocolGuid
