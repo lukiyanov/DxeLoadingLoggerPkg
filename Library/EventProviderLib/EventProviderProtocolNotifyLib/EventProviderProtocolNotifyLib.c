@@ -32,16 +32,6 @@ typedef struct
   VOID           *Registration;
 } NOTIFY_FUNCTION_CONTEXT;
 
-
-// -----------------------------------------------------------------------------
-/**
- * Создаёт по LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP для каждого образа, уже загруженного в момент нашего запуска.
-*/
-EFI_STATUS
-DetectImagesLoadedOnStartup (
-  IN OUT EVENT_PROVIDER *This
-  );
-
 // -----------------------------------------------------------------------------
 /**
  * Если Protocol присутствует в БД, то функция генерит событие LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP.
@@ -179,8 +169,8 @@ EventProvider_Start (
   }
 
   EFI_STATUS Status;
- Status = DetectImagesLoadedOnStartup (This);
- RETURN_ON_ERR (Status)
+  Status = DetectImagesLoadedOnStartup (This);
+  RETURN_ON_ERR (Status)
 
   UINTN KnownProtocolGuidCount = GetProtocolGuidCount();
 
@@ -224,52 +214,6 @@ EventProvider_Stop (
   Vector_Clear (&DataStruct->EventHandles);
 
   DBG_EXIT ();
-}
-
-// -----------------------------------------------------------------------------
-/**
- * Создаёт по LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP для каждого образа, уже загруженного в момент нашего запуска.
-*/
-EFI_STATUS
-DetectImagesLoadedOnStartup (
-  IN OUT EVENT_PROVIDER *This
-  )
-{
-  DBG_ENTER ();
-
-  EFI_STATUS  Status;
-  UINTN       HandleCount;
-  EFI_HANDLE  *Handles = NULL;
-
-  // Ищем все протоколы gEfiLoadedImageProtocolGuid и логируем их.
-  // Мы рассчитываем что в дальнейшем образы не будут выгружаться.
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gEfiLoadedImageProtocolGuid,
-                  NULL,
-                  &HandleCount,
-                  &Handles
-                  );
-  RETURN_ON_ERR (Status)
-
-  for (UINTN Index = 0; Index < HandleCount; ++Index) {
-    DBG_INFO ("-- Detecting image %u/%u name...\n", (unsigned)(Index + 1), (unsigned)HandleCount);
-
-    // Генерим событие.
-    LOADING_EVENT Event;
-    Event.Type = LOG_ENTRY_TYPE_IMAGE_EXISTS_ON_STARTUP;
-    GetHandleImageNameAndParentImageName (
-      Handles[Index],
-      &Event.ImageExistsOnStartup.ImageName,
-      &Event.ImageExistsOnStartup.ParentImageName
-      );
-
-    This->AddEvent (This->ExternalData, &Event);
-  }
-
-  gBS->FreePool (Handles);
-  DBG_EXIT_STATUS (EFI_SUCCESS);
-  return EFI_SUCCESS;
 }
 
 // -----------------------------------------------------------------------------
