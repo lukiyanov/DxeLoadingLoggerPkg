@@ -19,6 +19,7 @@
   PrintLib
   DevicePathLib
   CommonMacrosLib
+  HandleDatabaseDumpLib
 
 [Protocols]
   gEfiLoadedImageProtocolGuid

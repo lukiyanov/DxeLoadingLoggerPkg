@@ -172,12 +172,10 @@ EventProvider_Start (
   Status = DetectImagesLoadedOnStartup (This);
   RETURN_ON_ERR (Status)
 
-  UINTN KnownProtocolGuidCount = GetProtocolGuidCount();
+  Status = DetectProtocolsInstalledOnStartup (This);
+  RETURN_ON_ERR (Status)
 
-  for (UINTN Index = 0; Index < KnownProtocolGuidCount; ++Index) {
-    EFI_GUID *Guid = GetProtocolGuid(Index);
-    CheckProtocolExistenceOnStartup (This, Guid);
-  }
+  UINTN KnownProtocolGuidCount = GetProtocolGuidCount();
 
   for (UINTN Index = 0; Index < KnownProtocolGuidCount; ++Index) {
     EFI_GUID *Guid = GetProtocolGuid(Index);
