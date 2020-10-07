@@ -109,6 +109,66 @@ HandleDatabaseDump_Destruct (
 
 //------------------------------------------------------------------------------
 /**
+ * Возвращает список всех протоколов из Dump.
+ * Каждый протокол встречается в списке ровно один раз.
+ *
+ * @param Dump              Дамп, в котором мы ищем хэндлы.
+ * @param Protocols         Вектор с GUID'ами протоколов.
+ *                          Его НЕ нужно заранее инициализировать функцией Vector_Create ().
+ *                          Не забыть корректно уничтожить его.
+ *
+ * @param EFI_SUCCESS       Всё ок, результат в Protocols.
+ * @param Что-то другое     Операция не удалась.
+*/
+EFI_STATUS
+HandleDatabaseDump_PeekAllProtocols (
+  IN  HANDLE_DATABASE_DUMP    *Dump,
+  OUT VECTOR TYPE (EFI_GUID)  *Protocols
+  )
+{
+  DBG_ENTER ();
+
+  if (Dump == NULL || Protocols == NULL) {
+    DBG_EXIT_STATUS (EFI_INVALID_PARAMETER);
+    return EFI_INVALID_PARAMETER;
+  }
+
+  EFI_STATUS Status;
+  Status = Vector_Construct (Protocols, sizeof(EFI_GUID), 64);
+  RETURN_ON_ERR (Status);
+
+  FOR_EACH_VCT (HANDLE_DATABASE_ENTRY, HandleWithProtocols, *Dump) {
+    // Для каждого протокола...
+    FOR_EACH_VCT (EFI_GUID, Guid, HandleWithProtocols->InstalledProtocolGuids) {
+      BOOLEAN AlreadyStored = FALSE;
+
+      // Ищем, занесли ли мы его в список ранее...
+      FOR_EACH_VCT (EFI_GUID, StoredGuid, *Protocols) {
+        if (CompareGuid (Guid, StoredGuid)) {
+          AlreadyStored = TRUE;
+          break;
+        }
+      }
+
+      // И если мы его ещё не занесли в Protocols...
+      if (!AlreadyStored) {
+        // То заносим.
+        Status = Vector_PushBack (Protocols, Guid);
+        if (EFI_ERROR (Status)) {
+          Vector_Destruct (Protocols);
+          DBG_EXIT_STATUS (Status);
+          return Status;
+        }
+      }
+    }
+  }
+
+  DBG_EXIT_STATUS (EFI_SUCCESS);
+  return EFI_SUCCESS;
+}
+
+//------------------------------------------------------------------------------
+/**
  * Возвращает хэндлы из Dump, на которые установлен протокол ProtocolGuid.
  *
  * @param Dump              Дамп, в котором мы ищем хэндлы.
@@ -132,11 +192,19 @@ HandleDatabaseDump_PeekHandlesWithProtocol (
     return EFI_INVALID_PARAMETER;
   }
 
-  Vector_Construct (Handles, sizeof(EFI_HANDLE), 2);
+  EFI_STATUS Status;
+  Status = Vector_Construct (Handles, sizeof(EFI_HANDLE), 2);
+  RETURN_ON_ERR (Status);
+
   FOR_EACH_VCT (HANDLE_DATABASE_ENTRY, DbEntry, *Dump) {
     FOR_EACH_VCT (EFI_GUID, Guid, DbEntry->InstalledProtocolGuids) {
       if (CompareGuid (Guid, ProtocolGuid)) {
-        Vector_PushBack (Handles, &DbEntry->Handle);
+        Status = Vector_PushBack (Handles, &DbEntry->Handle);
+        if (EFI_ERROR (Status)) {
+          Vector_Destruct (Handles);
+          DBG_EXIT_STATUS (Status);
+          return Status;
+        }
         break;
       }
     }
@@ -189,7 +257,12 @@ HandleDatabaseDump_GetAddedHandles (
     }
 
     if (!Found) {
-      Vector_PushBack (HandlesAdded, HandleNew);
+      Status = Vector_PushBack (HandlesAdded, HandleNew);
+        if (EFI_ERROR (Status)) {
+          Vector_Destruct (HandlesAdded);
+          DBG_EXIT_STATUS (Status);
+          return Status;
+        }
     }
   }
 
