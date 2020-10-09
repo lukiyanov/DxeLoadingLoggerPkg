@@ -18,17 +18,19 @@ LoadingEvent_Destruct (
   switch (Event->Type)
   {
   case LOG_ENTRY_TYPE_PROTOCOL_INSTALLED:
-    SHELL_FREE_NON_NULL (Event->ProtocolInstalled.ImageNameWhoInstalled);
-    SHELL_FREE_NON_NULL (Event->ProtocolInstalled.ImageNameWhereInstalled);
+    SHELL_FREE_NON_NULL (Event->ProtocolInstalled.HandleDescription);
     break;
 
-  case LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP:
-    SHELL_FREE_NON_NULL (Event->ProtocolExistsOnStartup.ImageNames);
+  case LOG_ENTRY_TYPE_PROTOCOL_REINSTALLED:
+    SHELL_FREE_NON_NULL (Event->ProtocolReinstalled.HandleDescription);
     break;
 
   case LOG_ENTRY_TYPE_PROTOCOL_REMOVED:
-    SHELL_FREE_NON_NULL (Event->ProtocolRemoved.ImageNameWhoInstalled);
-    SHELL_FREE_NON_NULL (Event->ProtocolRemoved.ImageNameWhereInstalled);
+    SHELL_FREE_NON_NULL (Event->ProtocolRemoved.HandleDescription);
+    break;
+
+  case LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP:
+    SHELL_FREE_NON_NULL (Event->ProtocolExistsOnStartup.HandleDescription);
     break;
 
   case LOG_ENTRY_TYPE_IMAGE_LOADED:
@@ -43,6 +45,10 @@ LoadingEvent_Destruct (
 
   case LOG_ENTRY_TYPE_BDS_STAGE_ENTERED:
     // Нечего освобождать.
+    break;
+
+  case LOG_ENTRY_TYPE_ERROR:
+    SHELL_FREE_NON_NULL (Event->Error.Message);
     break;
 
   default:
