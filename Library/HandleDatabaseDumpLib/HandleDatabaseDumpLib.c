@@ -34,6 +34,8 @@ GetHandleDatabaseDump (
                   );
   RETURN_ON_ERR (Status);
 
+  DBG_INFO ("HANDLE count: %u\n", (unsigned)HandleCount);
+
   Status = Vector_Construct (
             Dump,
             sizeof(HANDLE_DATABASE_ENTRY),
@@ -55,10 +57,16 @@ GetHandleDatabaseDump (
       continue;
     }
 
-    HANDLE_DATABASE_ENTRY HandleInfo;
-    HandleInfo.Handle = Handles[Index];
+    HANDLE_DATABASE_ENTRY DbEntry;
+    Status = Vector_PushBack (Dump, &DbEntry);
+    if (EFI_ERROR (Status)) {
+      DBG_ERROR ("Error in Vector_PushBack(): %r", Status);
+    }
+    HANDLE_DATABASE_ENTRY *HandleInfo = (HANDLE_DATABASE_ENTRY *)Vector_GetLast (Dump);
+
+    HandleInfo->Handle = Handles[Index];
     Status = Vector_Construct (
-              &HandleInfo.InstalledProtocolGuids,
+              &HandleInfo->InstalledProtocolGuids,
               sizeof(EFI_GUID),
               ArrayCount
               );
@@ -71,7 +79,10 @@ GetHandleDatabaseDump (
     for (UINTN ProtocolIndex = 0; ProtocolIndex < ArrayCount; ProtocolIndex++) {
       EFI_GUID *ProtocolGuid = ProtocolGuidArray[ProtocolIndex];
 
-      Vector_PushBack (&HandleInfo.InstalledProtocolGuids, ProtocolGuid);
+      Status = Vector_PushBack (&HandleInfo->InstalledProtocolGuids, ProtocolGuid);
+      if (EFI_ERROR (Status)) {
+        DBG_ERROR ("Error in Vector_PushBack(): %r", Status);
+      }
     }
 
     SHELL_FREE_NON_NULL(ProtocolGuidArray);
