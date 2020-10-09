@@ -1,13 +1,13 @@
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = EventProviderProtocolNotifyLib
-  FILE_GUID                      = BD8CFCF8-48AF-4910-BBDA-F52EAF9DF820
+  BASE_NAME                      = EventProviderSystemTableHookLib
+  FILE_GUID                      = 7C13B482-68BC-49FE-B82E-49B7CDE0237F
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = EventProviderLib | DXE_DRIVER UEFI_APPLICATION UEFI_DRIVER
 
 [Sources]
-  EventProviderProtocolNotifyLib.c
+  EventProviderSystemTableHookLib.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -16,12 +16,19 @@
 [LibraryClasses]
   UefiBootServicesTableLib
   BaseMemoryLib
-  PrintLib
+  PcdLib
+  #UefiLib
+  #PrintLib
+  #DevicePathLib
 
-  VectorLib
-  ProtocolGuidDatabaseLib
+  #VectorLib
+  #ProtocolGuidDatabaseLib
   CommonMacrosLib
+  #HandleDatabaseDumpLib
   EventProviderUtilityLib
 
 [Protocols]
-  gEfiLoadedImageProtocolGuid
+  gEfiBdsArchProtocolGuid
+
+[FeaturePcd]
+  gDxeLoadingLoggerSpaceGuid.PcdBdsEntryHookEnabled

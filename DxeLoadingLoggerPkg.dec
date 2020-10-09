@@ -13,5 +13,7 @@
 [PcdsFeatureFlag]
   # Печать номеров событий на экран сразу после их возникновения.
   gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole | FALSE | BOOLEAN | 1
+  # Перехватывать переход на BDS-стадию.
+  gDxeLoadingLoggerSpaceGuid.PcdBdsEntryHookEnabled        | FALSE | BOOLEAN | 2
   # Отладочный вывод.
-  gDxeLoadingLoggerSpaceGuid.PcdDebugMacrosOutputEnabled   | FALSE | BOOLEAN | 2
+  gDxeLoadingLoggerSpaceGuid.PcdDebugMacrosOutputEnabled   | FALSE | BOOLEAN | 3

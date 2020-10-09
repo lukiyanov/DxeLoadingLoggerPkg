@@ -16,12 +16,17 @@
   # TRUE:
   #        События собираются путём модификации gST.
   #        Этот подход даёт больше информации, но системная прошивка может сопротивляться данному методу.
-  #
   # FALSE:
   #        События собираются посредством вызова RegisterProtocolNotify() для известных протоколов.
-  #        Гарантированно совместим со всеми прошивками, но даёт гораздо меньше информации.
+  #        Лучшая совместимость с прошивками, но даёт меньше информации.
   #
-  DEFINE EVENT_PROVIDER_GST_HOOK = FALSE  # TODO: в RELEASE-версии установить в TRUE
+  DEFINE EVENT_PROVIDER_GST_HOOK = TRUE
+
+  #
+  # Перехватывать переход на BDS-стадию.
+  # Актуально только для EVENT_PROVIDER_GST_HOOK = TRUE, иначе ни на что не влияет.
+  #
+  DEFINE DETECT_BDS_STAGE_ENTRY = TRUE
 
   #
   # Выводить номера событий в консоль.
@@ -36,7 +41,7 @@
   # Генерит подробный и длинный лог свой работы.
   # Только для отладки.
   #
-  DEFINE DEBUG_MACROS_OUTPUT_ON = FALSE
+  DEFINE DEBUG_MACROS_OUTPUT_ON = TRUE
 
   #
   # TRUE:
@@ -94,6 +99,7 @@
   LoadingEventLib             | DxeLoadingLoggerPkg/Library/LoadingEventLib/LoadingEventLib.inf
   TextAnimationLib            | DxeLoadingLoggerPkg/Library/TextAnimationLib/TextAnimationLib.inf
   HandleDatabaseDumpLib       | DxeLoadingLoggerPkg/Library/HandleDatabaseDumpLib/HandleDatabaseDumpLib.inf
+  EventProviderUtilityLib     | DxeLoadingLoggerPkg/Library/EventProviderLib/EventProviderUtilityLib/EventProviderUtilityLib.inf
 
 !if $(EVENT_PROVIDER_GST_HOOK)
   EventProviderLib            | DxeLoadingLoggerPkg/Library/EventProviderLib/EventProviderSystemTableHookLib/EventProviderSystemTableHookLib.inf
@@ -112,4 +118,5 @@
 
 [PcdsFeatureFlag]
   gDxeLoadingLoggerSpaceGuid.PcdPrintEventNumbersToConsole | $(PRINT_EVENT_NUMBERS_TO_CONSOLE)
+  gDxeLoadingLoggerSpaceGuid.PcdBdsEntryHookEnabled        | $(DETECT_BDS_STAGE_ENTRY)
   gDxeLoadingLoggerSpaceGuid.PcdDebugMacrosOutputEnabled   | $(DEBUG_MACROS_OUTPUT_ON)
