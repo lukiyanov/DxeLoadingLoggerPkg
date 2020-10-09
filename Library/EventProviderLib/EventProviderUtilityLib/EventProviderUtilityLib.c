@@ -102,11 +102,14 @@ DetectProtocolsInstalledOnStartup (
   IN OUT EVENT_PROVIDER *This
   )
 {
+  DBG_ENTER ();
   EFI_STATUS  Status;
 
   HANDLE_DATABASE_DUMP HandleDbDump;
   Status = GetHandleDatabaseDump (&HandleDbDump);
   RETURN_ON_ERR (Status);
+
+  DBG_INFO ("HANDLE count: %u\n", (unsigned)Vector_Size(&HandleDbDump));
 
   VECTOR TYPE (EFI_GUID) Protocols;
   Status = HandleDatabaseDump_PeekAllProtocols (&HandleDbDump, &Protocols);
@@ -115,6 +118,8 @@ DetectProtocolsInstalledOnStartup (
     DBG_EXIT_STATUS (Status);
     return Status;
   }
+
+  DBG_INFO ("PROTOCOL count: %u\n", (unsigned)Vector_Size(&Protocols));
 
   FOR_EACH_VCT (EFI_GUID, ProtocolGuid, Protocols) {
     CheckProtocolExistenceOnStartup (This, ProtocolGuid);
