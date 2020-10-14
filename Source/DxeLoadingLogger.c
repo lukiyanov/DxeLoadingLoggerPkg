@@ -23,6 +23,7 @@ STATIC EFI_FILE_PROTOCOL  *gLogFileProtocol;
 /**
  * Обрабатывает поступление новых событий, записывая их в лог.
 */
+STATIC
 VOID
 ProcessNewEvents ();
 
@@ -31,6 +32,7 @@ ProcessNewEvents ();
  * Дописывает информацию о событии Event в gLogFileProtocol.
  * В случае неудачи устанавливает gLogFileProtocol в NULL.
 */
+STATIC
 VOID
 AddNewEventToLog (
   IN     LOADING_EVENT      *Event,
@@ -48,6 +50,7 @@ AddNewEventToLog (
  * @retval EFI_SUCCESS     Файловая система найдена, результат записан в LogFileProtocol.
  * @retval Что-то другое.  Какая-то ошибка, LogFileProtocol остался без изменений.
 */
+STATIC
 EFI_STATUS
 FindFileSystem (
   OUT  EFI_FILE_PROTOCOL  **LogFileProtocol
@@ -58,6 +61,7 @@ FindFileSystem (
  * Печатает в файл.
  * Если не удалось, то устанавливает FileProtocol в NULL.
 */
+STATIC
 VOID
 EFIAPI
 PrintToFile (
@@ -70,6 +74,7 @@ PrintToFile (
 /**
  * Корректно закрывает FileProtocol, если это ещё не было сделано.
 */
+STATIC
 VOID
 FlushAndCloseFileProtocol (
   IN OUT EFI_FILE_PROTOCOL **FileProtocol
