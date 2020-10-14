@@ -86,24 +86,25 @@
 
 // -----------------------------------------------------------------------------
 // Хук на переход в BDS.
+STATIC
 VOID
 EFIAPI MyBdsArchProtocolEntry (
   IN EFI_BDS_ARCH_PROTOCOL  *This
   );
 
-static GLOBAL_REMOVE_IF_UNREFERENCED EFI_BDS_ARCH_PROTOCOL gMyBdsArchProtocol = { &MyBdsArchProtocolEntry };
-static GLOBAL_REMOVE_IF_UNREFERENCED EFI_BDS_ARCH_PROTOCOL *gOriginalBdsArchProtocol;
-static EVENT_PROVIDER  *gProvider;
-static EFI_EVENT       gEventDelay;
+STATIC GLOBAL_REMOVE_IF_UNREFERENCED EFI_BDS_ARCH_PROTOCOL gMyBdsArchProtocol = { &MyBdsArchProtocolEntry };
+STATIC GLOBAL_REMOVE_IF_UNREFERENCED EFI_BDS_ARCH_PROTOCOL *gOriginalBdsArchProtocol;
+STATIC EVENT_PROVIDER  *gProvider;
+STATIC EFI_EVENT       gEventDelay;
 
 // -----------------------------------------------------------------------------
 // Указатели на оригинальные системные сервисы.
 // -----------------------------------------------------------------------------
-static EFI_INSTALL_PROTOCOL_INTERFACE              gOriginalInstallProtocolInterface;
-static EFI_REINSTALL_PROTOCOL_INTERFACE            gOriginalReinstallProtocolInterface;
-static EFI_UNINSTALL_PROTOCOL_INTERFACE            gOriginalUninstallProtocolInterface;
-static EFI_INSTALL_MULTIPLE_PROTOCOL_INTERFACES    gOriginalInstallMultipleProtocolInterfaces;
-static EFI_UNINSTALL_MULTIPLE_PROTOCOL_INTERFACES  gOriginalUninstallMultipleProtocolInterfaces;
+STATIC EFI_INSTALL_PROTOCOL_INTERFACE              gOriginalInstallProtocolInterface;
+STATIC EFI_REINSTALL_PROTOCOL_INTERFACE            gOriginalReinstallProtocolInterface;
+STATIC EFI_UNINSTALL_PROTOCOL_INTERFACE            gOriginalUninstallProtocolInterface;
+STATIC EFI_INSTALL_MULTIPLE_PROTOCOL_INTERFACES    gOriginalInstallMultipleProtocolInterfaces;
+STATIC EFI_UNINSTALL_MULTIPLE_PROTOCOL_INTERFACES  gOriginalUninstallMultipleProtocolInterfaces;
 
 // -----------------------------------------------------------------------------
 // То, чем мы заменяем системные сервисы.

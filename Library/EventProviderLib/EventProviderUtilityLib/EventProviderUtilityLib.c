@@ -22,6 +22,7 @@
 /**
  * Если Protocol присутствует в БД, то функция генерит событие LOG_ENTRY_TYPE_PROTOCOL_EXISTS_ON_STARTUP.
 */
+STATIC
 VOID
 CheckProtocolExistenceOnStartup (
   IN  EVENT_PROVIDER  *This,
@@ -39,6 +40,7 @@ CheckProtocolExistenceOnStartup (
   @retval                    A string representation of the file name associated
                              with LoadedImage, or NULL if no name can be found.
 **/
+STATIC
 CHAR16 *
 FindLoadedImageFileName (
   IN EFI_LOADED_IMAGE_PROTOCOL *LoadedImage
@@ -338,7 +340,7 @@ CHAR16 *GetHandleName (
   EFI_HANDLE Handle
   )
 {
-  static CHAR16 Buffer[GET_HANDLE_NAME_BUFFER_SIZE];
+  STATIC CHAR16 Buffer[GET_HANDLE_NAME_BUFFER_SIZE];
 
   // Образ?
   if (IsHandleImage (Handle)) {
@@ -413,7 +415,7 @@ CheckProtocolExistenceOnStartup (
   if (EFI_ERROR (Status)) {
     HandleDescription = StrAllocCopy (L"<ERROR: can\t get handle buffer for protocol>");
   } else {
-    static CHAR16 Buffer[CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE];
+    STATIC CHAR16 Buffer[CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE];
     UnicodeSPrint(Buffer, CHECK_PROTOCOL_EXISTENCE_BUFFER_SIZE * sizeof(CHAR16), L"[%3u] { ", (unsigned)HandleCount);
     HandleDescription = StrAllocCopy (L"");
     StrAllocAppend(&HandleDescription, Buffer);

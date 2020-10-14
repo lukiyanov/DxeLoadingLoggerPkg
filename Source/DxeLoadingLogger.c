@@ -15,8 +15,8 @@
 
 
 // -----------------------------------------------------------------------------
-static LOGGER             gLogger;
-static EFI_FILE_PROTOCOL  *gLogFileProtocol;
+STATIC LOGGER             gLogger;
+STATIC EFI_FILE_PROTOCOL  *gLogFileProtocol;
 
 
 // -----------------------------------------------------------------------------
@@ -124,7 +124,7 @@ ProcessNewEvents ()
 {
   DBG_ENTER ()
 
-  static UINTN gLoggedEventCount;
+  STATIC UINTN gLoggedEventCount;
   EFI_STATUS Status;
 
   if (gLogFileProtocol == NULL) {
@@ -346,7 +346,7 @@ AddNewEventToLog (
         break;
       }
 
-      static CHAR16 Line[] = L"- --------------------------------------------------------------------------------\r\n";
+      STATIC CHAR16 Line[] = L"- --------------------------------------------------------------------------------\r\n";
       PrintToFile (gLogFileProtocol, Line);
       PrintToFile (gLogFileProtocol, L"-%5u- BDS-STAGE-ENTERED: %s\r\n", Number, SubType);
       PrintToFile (gLogFileProtocol, Line);
@@ -493,7 +493,7 @@ PrintToFile (
 {
   DBG_ENTER ();
 
-  static CHAR16 Buffer[PRINT_TO_FILE_BUFFER_LENGTH];
+  STATIC CHAR16 Buffer[PRINT_TO_FILE_BUFFER_LENGTH];
 
   if (FileProtocol == NULL || *FileProtocol == NULL) {
     DBG_EXIT_STATUS (EFI_ABORTED);

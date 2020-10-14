@@ -9,7 +9,7 @@ typedef struct
   CHAR16   *Name;
 } KNOWN_PROTOCOL_DB_ENTRY;
 
-static KNOWN_PROTOCOL_DB_ENTRY gProtocolDatabase[] = {
+STATIC KNOWN_PROTOCOL_DB_ENTRY gProtocolDatabase[] = {
   GUID_DB
 };
 

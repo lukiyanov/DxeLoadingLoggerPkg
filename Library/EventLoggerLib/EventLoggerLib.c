@@ -13,6 +13,7 @@
 /**
  * Функции обратного вызова, вызов происходит при поступлении события.
 */
+STATIC
 VOID
 AddEventToLog (
   IN OUT VOID           *Logger,
@@ -23,6 +24,7 @@ AddEventToLog (
 /**
  * Функции обратного вызова, сообщает пользователю класса о необходимости обработать события.
 */
+STATIC
 VOID
 UpdateLog (
   IN OUT VOID  *Logger

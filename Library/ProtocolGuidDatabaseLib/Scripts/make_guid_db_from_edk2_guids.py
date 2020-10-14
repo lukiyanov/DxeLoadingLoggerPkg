@@ -73,7 +73,7 @@ def generate_guid_db_file():
 
         for guid_name in guids_all:
             guid_value = guids_all[guid_name]
-            guid_header.write('static EFI_GUID my_{} = {{\n'.format(global_var_from_guid(guid_name)))
+            guid_header.write('STATIC EFI_GUID my_{} = {{\n'.format(global_var_from_guid(guid_name)))
             guid_header.write('  {}, {}, {}, {{ {}, {}, {}, {}, {}, {}, {}, {} }}\n'.format(
                 hex(guid_value[0]),
                 hex(guid_value[1]),
