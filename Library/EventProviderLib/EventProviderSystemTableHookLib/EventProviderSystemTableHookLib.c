@@ -2,6 +2,7 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/PcdLib.h>
+#include <Library/UefiLib.h>
 #include <Library/EventProviderLib.h>
 #include <Library/EventProviderUtilityLib.h>
 #include <Library/CommonMacrosLib.h>
@@ -92,7 +93,8 @@ EFIAPI MyBdsArchProtocolEntry (
 
 static GLOBAL_REMOVE_IF_UNREFERENCED EFI_BDS_ARCH_PROTOCOL gMyBdsArchProtocol = { &MyBdsArchProtocolEntry };
 static GLOBAL_REMOVE_IF_UNREFERENCED EFI_BDS_ARCH_PROTOCOL *gOriginalBdsArchProtocol;
-static GLOBAL_REMOVE_IF_UNREFERENCED EVENT_PROVIDER        *gProvider;
+static EVENT_PROVIDER  *gProvider;
+static EFI_EVENT       gEventDelay;
 
 // -----------------------------------------------------------------------------
 // Указатели на оригинальные системные сервисы.
@@ -106,6 +108,7 @@ static EFI_UNINSTALL_MULTIPLE_PROTOCOL_INTERFACES  gOriginalUninstallMultiplePro
 // -----------------------------------------------------------------------------
 // То, чем мы заменяем системные сервисы.
 // -----------------------------------------------------------------------------
+STATIC
 EFI_STATUS
 EFIAPI MyInstallProtocolInterface (
   IN OUT EFI_HANDLE               *Handle,
@@ -114,6 +117,7 @@ EFIAPI MyInstallProtocolInterface (
   IN     VOID                     *Interface
   );
 
+STATIC
 EFI_STATUS
 EFIAPI MyReinstallProtocolInterface (
   IN EFI_HANDLE               Handle,
@@ -122,6 +126,7 @@ EFIAPI MyReinstallProtocolInterface (
   IN VOID                     *NewInterface
   );
 
+STATIC
 EFI_STATUS
 EFIAPI MyUninstallProtocolInterface (
   IN EFI_HANDLE               Handle,
@@ -129,12 +134,14 @@ EFIAPI MyUninstallProtocolInterface (
   IN VOID                     *Interface
   );
 
+STATIC
 EFI_STATUS
 EFIAPI MyInstallMultipleProtocolInterfaces (
   IN OUT EFI_HANDLE           *Handle,
   ...
   );
 
+STATIC
 EFI_STATUS
 EFIAPI MyUninstallMultipleProtocolInterfaces (
   IN EFI_HANDLE           Handle,
@@ -145,6 +152,7 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
 /**
  * TRUE, если это EFI_BDS_ARCH_PROTOCOL_GUID и мы должны подменить его реализацию.
 */
+STATIC
 BOOLEAN
 IsBdsArchProtocolGuidAndWeMustSubstituteIt (
   VOID *Guid
@@ -159,9 +167,32 @@ IsBdsArchProtocolGuidAndWeMustSubstituteIt (
   @param  Hdr                    Pointer to an EFI standard header
 
 **/
+STATIC
 VOID
 CalculateEfiHdrCrc (
   IN  OUT EFI_TABLE_HEADER    *Hdr
+  );
+
+// -----------------------------------------------------------------------------
+/**
+ * Функция уведомления (обратного вызова) для gEventDelay.
+ */
+STATIC
+VOID
+EFIAPI
+EventDelayNotificationFunc (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  );
+
+// -----------------------------------------------------------------------------
+/**
+ * Добавляет событие в лог.
+ */
+STATIC
+VOID
+AddEventToLog (
+  LOADING_EVENT *Event
   );
 
 
@@ -181,6 +212,7 @@ EFI_STATUS
 EventProvider_Construct(
   IN OUT EVENT_PROVIDER  *This,
   IN     ADD_EVENT       AddEvent,
+  IN     UPDATE_LOG      UpdateLog,
   IN     VOID            *ExternalData
   )
 {
@@ -196,7 +228,18 @@ EventProvider_Construct(
     return RETURN_UNSUPPORTED;
   }
 
+  EFI_STATUS Status;
+  Status = gBS->CreateEvent (
+                  EVT_TIMER | EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  EventDelayNotificationFunc,
+                  NULL,
+                  &gEventDelay
+                  );
+  RETURN_ON_ERR (Status);
+
   This->AddEvent     = AddEvent;
+  This->UpdateLog    = UpdateLog;
   This->ExternalData = ExternalData;
   This->Data         = NULL;
 
@@ -219,6 +262,7 @@ EventProvider_Destruct (
   DBG_ENTER ();
 
   EventProvider_Stop (This);
+  gBS->CloseEvent (gEventDelay);
   gProvider = NULL;
 
   DBG_EXIT ();
@@ -306,6 +350,35 @@ EventProvider_Stop (
 }
 
 // -----------------------------------------------------------------------------
+/**
+ * Функция уведомления (обратного вызова) для gEventDelay.
+ */
+VOID
+EFIAPI
+EventDelayNotificationFunc (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  gProvider->UpdateLog (gProvider->ExternalData);
+}
+
+// -----------------------------------------------------------------------------
+/**
+ * Добавляет событие в лог.
+ */
+VOID
+AddEventToLog (
+  LOADING_EVENT *Event
+  )
+{
+  gProvider->AddEvent (gProvider->ExternalData, Event);
+
+  gBS->SetTimer (gEventDelay, TimerCancel, 0);
+  gBS->SetTimer (gEventDelay, TimerRelative, EFI_TIMER_PERIOD_MILLISECONDS (200));
+}
+
+// -----------------------------------------------------------------------------
 VOID
 EFIAPI MyBdsArchProtocolEntry (
   IN EFI_BDS_ARCH_PROTOCOL  *This
@@ -317,7 +390,7 @@ EFIAPI MyBdsArchProtocolEntry (
   // Event: BEFORE
   Event.Type = LOG_ENTRY_TYPE_BDS_STAGE_ENTERED;
   Event.BdsStageEntered.SubEvent = BDS_STAGE_EVENT_BEFORE_ENTRY_CALLING;
-  gProvider->AddEvent (gProvider->ExternalData, &Event);
+  AddEventToLog (&Event);
 
   // Переход на BDS стадию.
   gOriginalBdsArchProtocol->Entry(This);
@@ -325,7 +398,7 @@ EFIAPI MyBdsArchProtocolEntry (
   // Event: AFTER
   Event.Type = LOG_ENTRY_TYPE_BDS_STAGE_ENTERED;
   Event.BdsStageEntered.SubEvent = BDS_STAGE_EVENT_AFTER_ENTRY_CALLING;
-  gProvider->AddEvent (gProvider->ExternalData, &Event);
+  AddEventToLog (&Event);
 
   DBG_EXIT ();
 }
@@ -354,7 +427,7 @@ EFIAPI MyInstallProtocolInterface (
   Event.ProtocolInstalled.Guid              = *ProtocolGuid;
   Event.ProtocolInstalled.Successful        = !EFI_ERROR (Status);
   Event.ProtocolInstalled.HandleDescription = GetHandleName (Handle);
-  gProvider->AddEvent (gProvider->ExternalData, &Event);
+  AddEventToLog (&Event);
 
   DBG_EXIT_STATUS (Status);
   return Status;
@@ -385,7 +458,7 @@ EFIAPI MyReinstallProtocolInterface (
   Event.ProtocolReinstalled.Guid              = *ProtocolGuid;
   Event.ProtocolReinstalled.Successful        = !EFI_ERROR (Status);
   Event.ProtocolReinstalled.HandleDescription = GetHandleName (Handle);
-  gProvider->AddEvent (gProvider->ExternalData, &Event);
+  AddEventToLog (&Event);
 
   DBG_EXIT_STATUS (Status);
   return Status;
@@ -413,7 +486,7 @@ EFIAPI MyUninstallProtocolInterface (
   Event.ProtocolRemoved.Guid              = *ProtocolGuid;
   Event.ProtocolRemoved.Successful        = !EFI_ERROR (Status);
   Event.ProtocolRemoved.HandleDescription = GetHandleName (Handle);
-  gProvider->AddEvent (gProvider->ExternalData, &Event);
+  AddEventToLog (&Event);
 
   DBG_EXIT_STATUS (Status);
   return Status;
@@ -442,7 +515,7 @@ EFIAPI MyInstallMultipleProtocolInterfaces (
         LOADING_EVENT Event;
         Event.Type          = LOG_ENTRY_TYPE_ERROR;
         Event.Error.Message = StrAllocCopy (L"InstallMultipleProtocolInterfaces(): limit of protocols reached");
-        gProvider->AddEvent (gProvider->ExternalData, &Event);
+        AddEventToLog (&Event);
         break;
       }
 
@@ -477,7 +550,7 @@ EFIAPI MyInstallMultipleProtocolInterfaces (
     Event.ProtocolInstalled.Guid              = *((EFI_GUID *) FunctionArgList[i]);
     Event.ProtocolInstalled.Successful        = !EFI_ERROR (Status);
     Event.ProtocolInstalled.HandleDescription = GetHandleName (Handle);
-    gProvider->AddEvent (gProvider->ExternalData, &Event);
+    AddEventToLog (&Event);
   }
 
   DBG_EXIT_STATUS (Status);
@@ -507,7 +580,7 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
         LOADING_EVENT Event;
         Event.Type          = LOG_ENTRY_TYPE_ERROR;
         Event.Error.Message = StrAllocCopy (L"UninstallMultipleProtocolInterfaces(): limit of protocols reached");
-        gProvider->AddEvent (gProvider->ExternalData, &Event);
+        AddEventToLog (&Event);
         break;
       }
 
@@ -541,7 +614,7 @@ EFIAPI MyUninstallMultipleProtocolInterfaces (
     Event.ProtocolRemoved.Guid              = *((EFI_GUID *) FunctionArgList[i]);
     Event.ProtocolRemoved.Successful        = !EFI_ERROR (Status);
     Event.ProtocolRemoved.HandleDescription = GetHandleName (Handle);
-    gProvider->AddEvent (gProvider->ExternalData, &Event);
+    AddEventToLog (&Event);
   }
 
   DBG_EXIT_STATUS (Status);

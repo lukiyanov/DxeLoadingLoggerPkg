@@ -21,6 +21,16 @@ AddEventToLog (
 
 // -----------------------------------------------------------------------------
 /**
+ * Функции обратного вызова, сообщает пользователю класса о необходимости обработать события.
+*/
+VOID
+UpdateLog (
+  IN OUT VOID  *Logger
+  );
+
+
+// -----------------------------------------------------------------------------
+/**
  * Инициализирует структуру LOGGER.
  * Функция должна быть обязательно однократно вызвана перед использованием объекта.
  *
@@ -53,6 +63,7 @@ Logger_Construct (
   Status = EventProvider_Construct (
             &This->EventProvider,
             &AddEventToLog,
+            &UpdateLog,
             This
             );
   RETURN_ON_ERR(Status)
@@ -142,8 +153,9 @@ AddEventToLog (
   )
 {
   DBG_ENTER ();
-  EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
+  ASSERT (Event != NULL);
 
+  EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
   LOGGER *This = (LOGGER *)Logger;
 
   EFI_STATUS Status;
@@ -276,6 +288,27 @@ AddEventToLog (
 
   DEBUG_CODE_END ();
   DBG_INFO1 ("-----------------------------------------------------------\n");
+
+  gBS->RestoreTPL (OldTpl);
+  DBG_EXIT ();
+}
+
+// -----------------------------------------------------------------------------
+/**
+ * Функции обратного вызова, сообщает пользователю класса о необходимости обработать события.
+*/
+VOID
+UpdateLog (
+  IN OUT VOID  *Logger
+  )
+{
+  DBG_ENTER ();
+  EFI_TPL OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
+  LOGGER *This = (LOGGER *)Logger;
+
+  if (This->EventIncomedCallback != NULL) {
+    This->EventIncomedCallback ();
+  }
 
   gBS->RestoreTPL (OldTpl);
   DBG_EXIT ();

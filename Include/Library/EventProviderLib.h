@@ -17,13 +17,23 @@ VOID
   );
 
 // -----------------------------------------------------------------------------
+typedef
+VOID
+(*UPDATE_LOG) (
+  IN VOID           *ExternalData   // Получаем извне и передаём без изменений.
+  );
+
+// -----------------------------------------------------------------------------
 typedef struct
 {
   // Зависит от реализации.
   VOID *Data;
   // Функция обратного вызова, вызывается при появлении нового события.
   ADD_EVENT AddEvent;
-  // Данные для AddEvent, которые мы получаем извне.
+  // Функция обратного вызова, вызывается при необходимости инициировать обработку событий как в AddEvent,
+  // однако без добавления новых событий.
+  UPDATE_LOG UpdateLog;
+  // Данные для AddEvent() и UpdateLog(), которые мы получаем извне.
   VOID *ExternalData;
 } EVENT_PROVIDER;
 
@@ -43,6 +53,7 @@ EFI_STATUS
 EventProvider_Construct(
   IN OUT EVENT_PROVIDER  *This,
   IN     ADD_EVENT       AddEvent,
+  IN     UPDATE_LOG      UpdateLog,
   IN     VOID            *ExternalData
   );
 

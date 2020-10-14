@@ -35,6 +35,7 @@ typedef struct
 /**
  * Начинает отслеживание установки новых экземпляров протокола.
 */
+STATIC
 EFI_STATUS
 SubscribeToProtocolInstallation (
   IN OUT EVENT_PROVIDER  *This,
@@ -45,6 +46,7 @@ SubscribeToProtocolInstallation (
 /**
  * Вызывается при установке протокола в БД.
 */
+STATIC
 VOID
 EFIAPI
 ProtocolInstalledCallback (
@@ -69,6 +71,7 @@ EFI_STATUS
 EventProvider_Construct(
   IN OUT EVENT_PROVIDER  *This,
   IN     ADD_EVENT       AddEvent,
+  IN     UPDATE_LOG      UpdateLog,
   IN     VOID            *ExternalData
   )
 {
@@ -80,6 +83,7 @@ EventProvider_Construct(
   }
 
   This->AddEvent     = AddEvent;
+  This->UpdateLog    = UpdateLog;
   This->ExternalData = ExternalData;
 
   EFI_STATUS Status;
