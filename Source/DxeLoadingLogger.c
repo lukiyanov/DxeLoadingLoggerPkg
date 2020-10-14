@@ -1,9 +1,6 @@
 #include <Uefi.h>
 #include <Library/UefiBootServicesTableLib.h>
-#include <Library/BaseLib.h>
-#include <Library/UefiLib.h>
 #include <Library/PrintLib.h>
-#include <Library/PcdLib.h>
 #include <Library/EventLoggerLib.h>
 #include <Library/CommonMacrosLib.h>
 #include <Library/VectorLib.h>

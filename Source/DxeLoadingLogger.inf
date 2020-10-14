@@ -19,9 +19,6 @@
   UefiDriverEntryPoint
   UefiBootServicesTableLib
   BaseMemoryLib
-  BaseLib
-  UefiLib
-  PcdLib
   PrintLib
   DevicePathLib
   # Наши
