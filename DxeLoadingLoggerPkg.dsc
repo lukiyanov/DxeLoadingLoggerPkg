@@ -20,7 +20,7 @@
   #        События собираются посредством вызова RegisterProtocolNotify() для известных протоколов.
   #        Лучшая совместимость с прошивками, но даёт меньше информации.
   #
-  DEFINE EVENT_PROVIDER_GST_HOOK = TRUE
+  DEFINE EVENT_PROVIDER_GST_HOOK = FALSE
 
   #
   # Перехватывать переход на BDS-стадию.
@@ -50,7 +50,7 @@
   # FALSE:
   #        Отладочные события выводятся на экран.
   #
-  DEFINE DEBUG_OUTPUT_TO_SERIAL  = FALSE
+  DEFINE DEBUG_OUTPUT_TO_SERIAL  = TRUE
 
   DEFINE DEBUG_PRINT_ERROR_LEVEL = 0x80000040
   DEFINE DEBUG_PROPERTY_MASK     = 0x0f
@@ -82,9 +82,13 @@
   UefiRuntimeServicesTableLib | MdePkg/Library/UefiRuntimeServicesTableLib/UefiRuntimeServicesTableLib.inf
   DebugPrintErrorLevelLib     | MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
 
+  # Для RegisterFilterLib
+  !include MdePkg/MdeLibs.dsc.inc
+
 !if $(DEBUG_OUTPUT_TO_SERIAL)
   DebugLib                    | MdePkg/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
   SerialPortLib               | PcAtChipsetPkg/Library/SerialIoLib/SerialIoLib.inf
+  IoLib                       | MdePkg/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsic.inf
 !else
   DebugLib                    | MdePkg/Library/UefiDebugLibConOut/UefiDebugLibConOut.inf
 !endif
